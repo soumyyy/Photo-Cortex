@@ -12,7 +12,7 @@ class SceneClassifier:
     def __init__(self, model_path: str = "./models/weights/scene_classifier/resnet50_places365.pth.tar"):
         """Initialize Places365 model for scene classification."""
         try:
-            logger.info(f"Loading Places365 model from {model_path}")
+            # logger.info(f"Loading Places365 model from {model_path}")
             
             # Load the model architecture (ResNet50)
             self.model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
@@ -20,12 +20,12 @@ class SceneClassifier:
             self.model.fc = torch.nn.Linear(num_ftrs, 365)  # Places365 has 365 categories
             
             # Load Places365 weights
-            logger.info("Loading model weights...")
+            # logger.info("Loading model weights...")
             checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
             state_dict = {k.replace('module.', ''): v for k, v in checkpoint['state_dict'].items()}
             self.model.load_state_dict(state_dict)
             self.model.eval()
-            logger.info("Model weights loaded successfully")
+            # logger.info("Model weights loaded successfully")
 
             # Define broader ranges for indoor/outdoor
             self.indoor_ranges = [(0, 150)]  # First 150 categories are typically indoor

@@ -15,10 +15,14 @@ from PIL.ExifTags import TAGS
 import datetime
 from fractions import Fraction
 
-# Configure minimal logging
+# Configure logging at the start of the file
 logging.basicConfig(
     level=logging.INFO,
-    format='%(levelname)s: %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('app.log')
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -133,58 +137,95 @@ async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
     total_files = len(image_files)
     results = []
     
-    for idx, image_path in enumerate(image_files, 1):
-        try:
-            # Read and analyze image
-            image = cv2.imread(str(image_path))
-            if image is None:
-                logger.warning(f"Could not read image: {image_path.name}")
-                continue
+    try:
+        for i, image_path in enumerate(image_files):
+            try:
+                # Read image with error handling
+                image = cv2.imread(str(image_path))
+                if image is None:
+                    continue
+                
+                # Basic image validation
+                if image.size == 0 or len(image.shape) != 3:
+                    continue
+                    
+                # Convert RGBA to RGB if needed
+                if image.shape[2] == 4:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+                
+                try:
+                    face_results = await asyncio.get_event_loop().run_in_executor(
+                        None, analyzer.face_detector.detect_faces, image, image_path.name
+                    )
+                    
+                    object_results = await asyncio.get_event_loop().run_in_executor(
+                        None, analyzer.object_detector.detect_objects, image
+                    )
+                    
+                    scene_results = await asyncio.get_event_loop().run_in_executor(
+                        None, analyzer.scene_classifier.predict_scene, image
+                    )
+                    
+                    # Skip text recognition temporarily
+                    text_results = {
+                        "text_detected": False,
+                        "text_blocks": [],
+                        "total_confidence": 0.0
+                    }
+                    
+                    metadata = await asyncio.get_event_loop().run_in_executor(
+                        None, extract_metadata, image_path
+                    )
+                    
+                except Exception as e:
+                    continue
 
-            # Get analysis results
-            face_results = analyzer.face_detector.detect_faces(image, image_path.name)
-            object_results = analyzer.object_detector.detect_objects(image)
-            scene_results = analyzer.scene_classifier.predict_scene(image)
-            text_results = analyzer.text_recognizer.detect_text(image)
-            metadata = extract_metadata(image_path)
+                # Store results
+                result = {
+                    "filename": image_path.name,
+                    "faces": face_results.get("faces", []),
+                    "objects": [obj["class"] for obj in object_results] if object_results else [],
+                    "scene_classification": scene_results or {"scene_type": "unknown", "confidence": 0.0},
+                    "text_recognition": text_results,
+                    "metadata": metadata or {}
+                }
+                results.append(result)
+                
+                # Send progress update
+                progress = {
+                    "progress": ((i + 1) / total_files) * 100,
+                    "current": i + 1,
+                    "total": total_files,
+                    "latest_result": result,
+                    "complete": False
+                }
+                yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
+                
+            except Exception:
+                continue
             
-            # Store results
-            result = {
-                "filename": image_path.name,
-                "faces": face_results["faces"],
-                "objects": [obj["class"] for obj in object_results],
-                "scene_classification": scene_results,
-                "text_recognition": text_results,
-                "metadata": metadata
-            }
-            results.append(result)
-            
-            # Send progress update
-            progress = {
-                "progress": (idx / total_files) * 100,
-                "current": idx,
-                "total": total_files,
-                "latest_result": result,
-                "complete": False
-            }
-            yield json.dumps(progress) + "\n"
-            
-            # Small delay to prevent overwhelming the client
+            # Small delay between images
             await asyncio.sleep(0.1)
-            
-        except Exception as e:
-            logger.error(f"Failed to process {image_path.name}: {str(e)}")
-            continue
+    
+    except Exception as e:
+        yield json.dumps({
+            "error": "Processing failed",
+            "message": str(e)
+        }) + "\n"
+        return
     
     # Send final results
-    final_update = {
-        "progress": 100,
-        "current": total_files,
-        "total": total_files,
-        "results": results,
-        "complete": True
-    }
-    yield json.dumps(final_update) + "\n"
+    try:
+        final_update = {
+            "progress": 100,
+            "current": total_files,
+            "total": total_files,
+            "results": results,
+            "complete": True
+        }
+        yield json.dumps(final_update, cls=NumpyJSONEncoder) + "\n"
+    except Exception:
+        pass
 
 @app.get("/analyze-folder")
 async def analyze_folder():
@@ -231,17 +272,42 @@ async def get_unique_faces():
 async def health_check():
     """Check if the server and models are healthy."""
     try:
-        return JSONResponse(content={
-            "status": "healthy",
-            "models": {
-                "face_detector": analyzer.face_detector is not None,
-                "object_detector": analyzer.object_detector is not None
+        # Check if models are initialized
+        models_status = {
+            "face_detector": analyzer.face_detector.app is not None,
+            "object_detector": analyzer.object_detector.model is not None,
+            "scene_classifier": analyzer.scene_classifier.model is not None,
+            "text_recognizer": analyzer.text_recognizer.initialized
+        }
+        
+        # Check if any model failed to initialize
+        all_models_healthy = all(models_status.values())
+        
+        if not all_models_healthy:
+            failed_models = [name for name, status in models_status.items() if not status]
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "unhealthy",
+                    "error": f"Failed models: {', '.join(failed_models)}",
+                    "models": models_status
+                }
+            )
+            
+        return JSONResponse(
+            content={
+                "status": "healthy",
+                "models": models_status
             }
-        })
+        )
     except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"status": "unhealthy", "error": str(e)}
+            content={
+                "status": "unhealthy",
+                "error": str(e)
+            }
         )
 
 if __name__ == "__main__":

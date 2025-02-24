@@ -1,0 +1,801 @@
+2025-02-24 12:58:10,526 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 12:58:10,586 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 12:58:10,952 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 12:58:11,011 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 12:58:11,011 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:02:05,638 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 171 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:02:12,391 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:02:12,431 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:02:12,825 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:02:12,869 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:02:12,869 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:02:13,064 - main - INFO - Starting analysis of 24 images in batches of 5
+2025-02-24 13:02:13,065 - main - INFO - Processing batch 1 (5 images)
+2025-02-24 13:02:13,065 - main - INFO - Processing image: IMG_7284.jpeg
+2025-02-24 13:02:13,101 - main - INFO - Starting face detection for IMG_7284.jpeg
+2025-02-24 13:02:13,767 - main - INFO - Starting object detection for IMG_7284.jpeg
+2025-02-24 13:02:14,091 - main - INFO - Starting scene classification for IMG_7284.jpeg
+2025-02-24 13:02:14,203 - main - INFO - Starting text recognition for IMG_7284.jpeg
+2025-02-24 13:05:18,056 - main - INFO - Extracting metadata for IMG_7284.jpeg
+2025-02-24 13:05:18,062 - main - INFO - Successfully processed all analyses for IMG_7284.jpeg
+2025-02-24 13:05:18,062 - main - INFO - Added results for IMG_7284.jpeg
+2025-02-24 13:05:18,062 - main - INFO - Processing image: IMG_7769.jpeg
+2025-02-24 13:05:18,121 - main - INFO - Starting face detection for IMG_7769.jpeg
+2025-02-24 13:05:18,594 - main - INFO - Starting object detection for IMG_7769.jpeg
+2025-02-24 13:05:18,781 - main - INFO - Starting scene classification for IMG_7769.jpeg
+2025-02-24 13:05:18,918 - main - INFO - Starting text recognition for IMG_7769.jpeg
+2025-02-24 13:05:46,267 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 171 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:05:46,269 - main - INFO - Extracting metadata for IMG_7769.jpeg
+2025-02-24 13:05:50,121 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:05:50,166 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:05:50,521 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:05:50,565 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:05:50,566 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:06:06,253 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:06:06,296 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:06:06,665 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:06:06,712 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:06:06,712 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:06:08,209 - main - INFO - Starting analysis of 24 images in batches of 5
+2025-02-24 13:06:08,209 - main - INFO - Processing batch 1 (5 images)
+2025-02-24 13:06:08,209 - main - INFO - Processing image: IMG_7284.jpeg
+2025-02-24 13:06:08,260 - main - INFO - Starting face detection for IMG_7284.jpeg
+2025-02-24 13:06:09,113 - main - INFO - Starting object detection for IMG_7284.jpeg
+2025-02-24 13:06:09,415 - main - INFO - Starting scene classification for IMG_7284.jpeg
+2025-02-24 13:06:09,617 - main - INFO - Starting text recognition for IMG_7284.jpeg
+2025-02-24 13:06:24,620 - main - WARNING - Text recognition timed out for IMG_7284.jpeg
+2025-02-24 13:06:24,621 - main - INFO - Extracting metadata for IMG_7284.jpeg
+2025-02-24 13:06:24,630 - main - INFO - Successfully processed all analyses for IMG_7284.jpeg
+2025-02-24 13:06:24,630 - main - INFO - Added results for IMG_7284.jpeg
+2025-02-24 13:06:24,630 - main - INFO - Processing image: IMG_7769.jpeg
+2025-02-24 13:06:24,705 - main - INFO - Starting face detection for IMG_7769.jpeg
+2025-02-24 13:06:25,238 - main - INFO - Starting object detection for IMG_7769.jpeg
+2025-02-24 13:06:25,376 - main - INFO - Starting scene classification for IMG_7769.jpeg
+2025-02-24 13:06:25,519 - main - INFO - Starting text recognition for IMG_7769.jpeg
+2025-02-24 13:06:40,520 - main - WARNING - Text recognition timed out for IMG_7769.jpeg
+2025-02-24 13:06:40,521 - main - INFO - Extracting metadata for IMG_7769.jpeg
+2025-02-24 13:06:40,524 - main - INFO - Successfully processed all analyses for IMG_7769.jpeg
+2025-02-24 13:06:40,524 - main - INFO - Added results for IMG_7769.jpeg
+2025-02-24 13:06:40,524 - main - INFO - Processing image: IMG_0370.JPG
+2025-02-24 13:06:40,530 - main - INFO - Starting face detection for IMG_0370.JPG
+2025-02-24 13:06:41,430 - main - INFO - Starting object detection for IMG_0370.JPG
+2025-02-24 13:06:41,560 - main - INFO - Starting scene classification for IMG_0370.JPG
+2025-02-24 13:06:41,628 - main - INFO - Starting text recognition for IMG_0370.JPG
+2025-02-24 13:06:43,433 - main - INFO - Extracting metadata for IMG_0370.JPG
+2025-02-24 13:06:43,434 - main - INFO - Successfully processed all analyses for IMG_0370.JPG
+2025-02-24 13:06:43,434 - main - INFO - Added results for IMG_0370.JPG
+2025-02-24 13:06:43,434 - main - INFO - Processing image: IMG_9448.jpeg
+2025-02-24 13:06:43,481 - main - INFO - Starting face detection for IMG_9448.jpeg
+2025-02-24 13:06:43,942 - main - INFO - Starting object detection for IMG_9448.jpeg
+2025-02-24 13:06:44,047 - main - INFO - Starting scene classification for IMG_9448.jpeg
+2025-02-24 13:06:44,124 - main - INFO - Starting text recognition for IMG_9448.jpeg
+2025-02-24 13:06:59,126 - main - WARNING - Text recognition timed out for IMG_9448.jpeg
+2025-02-24 13:06:59,127 - main - INFO - Extracting metadata for IMG_9448.jpeg
+2025-02-24 13:06:59,131 - main - INFO - Successfully processed all analyses for IMG_9448.jpeg
+2025-02-24 13:06:59,131 - main - INFO - Added results for IMG_9448.jpeg
+2025-02-24 13:06:59,131 - main - INFO - Processing image: IMG_8255.jpeg
+2025-02-24 13:06:59,175 - main - INFO - Starting face detection for IMG_8255.jpeg
+2025-02-24 13:06:59,940 - main - INFO - Starting object detection for IMG_8255.jpeg
+2025-02-24 13:07:00,191 - main - INFO - Starting scene classification for IMG_8255.jpeg
+2025-02-24 13:07:00,281 - main - INFO - Starting text recognition for IMG_8255.jpeg
+2025-02-24 13:07:15,282 - main - WARNING - Text recognition timed out for IMG_8255.jpeg
+2025-02-24 13:07:15,283 - main - INFO - Extracting metadata for IMG_8255.jpeg
+2025-02-24 13:07:15,291 - main - INFO - Successfully processed all analyses for IMG_8255.jpeg
+2025-02-24 13:07:15,292 - main - INFO - Added results for IMG_8255.jpeg
+2025-02-24 13:07:15,292 - main - INFO - Sending progress update: 20.8% complete
+2025-02-24 13:07:15,396 - main - INFO - Processing batch 2 (5 images)
+2025-02-24 13:07:15,396 - main - INFO - Processing image: IMG_9645.jpeg
+2025-02-24 13:07:15,456 - main - INFO - Starting face detection for IMG_9645.jpeg
+2025-02-24 13:07:15,923 - main - INFO - Starting object detection for IMG_9645.jpeg
+2025-02-24 13:07:16,121 - main - INFO - Starting scene classification for IMG_9645.jpeg
+2025-02-24 13:07:16,421 - main - INFO - Starting text recognition for IMG_9645.jpeg
+2025-02-24 13:07:31,423 - main - WARNING - Text recognition timed out for IMG_9645.jpeg
+2025-02-24 13:07:31,432 - main - INFO - Extracting metadata for IMG_9645.jpeg
+2025-02-24 13:07:31,435 - main - INFO - Successfully processed all analyses for IMG_9645.jpeg
+2025-02-24 13:07:31,435 - main - INFO - Added results for IMG_9645.jpeg
+2025-02-24 13:07:31,435 - main - INFO - Processing image: c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:31,508 - main - INFO - Starting face detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:33,975 - main - INFO - Starting object detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:34,220 - main - INFO - Starting scene classification for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:34,402 - main - INFO - Starting text recognition for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:49,403 - main - WARNING - Text recognition timed out for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:49,404 - main - INFO - Extracting metadata for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:49,409 - main - INFO - Successfully processed all analyses for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:49,409 - main - INFO - Added results for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:07:49,410 - main - INFO - Processing image: 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:49,435 - main - INFO - Starting face detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:51,605 - main - INFO - Starting object detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:51,916 - main - INFO - Starting scene classification for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:52,022 - main - INFO - Starting text recognition for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:53,760 - main - INFO - Extracting metadata for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:53,761 - main - INFO - Successfully processed all analyses for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:53,761 - main - INFO - Added results for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:07:53,761 - main - INFO - Processing image: IMG_9874.PNG
+2025-02-24 13:07:53,771 - main - INFO - Starting face detection for IMG_9874.PNG
+2025-02-24 13:07:54,077 - main - INFO - Starting object detection for IMG_9874.PNG
+2025-02-24 13:07:54,267 - main - INFO - Starting scene classification for IMG_9874.PNG
+2025-02-24 13:07:54,523 - main - INFO - Starting text recognition for IMG_9874.PNG
+2025-02-24 13:07:56,580 - main - INFO - Extracting metadata for IMG_9874.PNG
+2025-02-24 13:07:56,582 - main - INFO - Successfully processed all analyses for IMG_9874.PNG
+2025-02-24 13:07:56,583 - main - INFO - Added results for IMG_9874.PNG
+2025-02-24 13:07:56,583 - main - INFO - Processing image: IMG_9205.jpeg
+2025-02-24 13:07:56,626 - main - INFO - Starting face detection for IMG_9205.jpeg
+2025-02-24 13:08:05,078 - main - INFO - Starting object detection for IMG_9205.jpeg
+2025-02-24 13:08:05,400 - main - INFO - Starting scene classification for IMG_9205.jpeg
+2025-02-24 13:08:05,616 - main - INFO - Starting text recognition for IMG_9205.jpeg
+2025-02-24 13:08:20,617 - main - WARNING - Text recognition timed out for IMG_9205.jpeg
+2025-02-24 13:08:20,619 - main - INFO - Extracting metadata for IMG_9205.jpeg
+2025-02-24 13:08:20,621 - main - INFO - Successfully processed all analyses for IMG_9205.jpeg
+2025-02-24 13:08:20,621 - main - INFO - Added results for IMG_9205.jpeg
+2025-02-24 13:08:20,621 - main - INFO - Sending progress update: 41.7% complete
+2025-02-24 13:08:20,724 - main - INFO - Processing batch 3 (5 images)
+2025-02-24 13:08:20,724 - main - INFO - Processing image: IMG_7542.jpeg
+2025-02-24 13:08:20,804 - main - INFO - Starting face detection for IMG_7542.jpeg
+2025-02-24 13:08:22,226 - main - INFO - Starting object detection for IMG_7542.jpeg
+2025-02-24 13:08:22,544 - main - INFO - Starting scene classification for IMG_7542.jpeg
+2025-02-24 13:08:22,734 - main - INFO - Starting text recognition for IMG_7542.jpeg
+2025-02-24 13:08:37,736 - main - WARNING - Text recognition timed out for IMG_7542.jpeg
+2025-02-24 13:08:37,740 - main - INFO - Extracting metadata for IMG_7542.jpeg
+2025-02-24 13:08:37,748 - main - INFO - Successfully processed all analyses for IMG_7542.jpeg
+2025-02-24 13:08:37,748 - main - INFO - Added results for IMG_7542.jpeg
+2025-02-24 13:08:37,748 - main - INFO - Processing image: IMG_2941.jpeg
+2025-02-24 13:08:37,817 - main - INFO - Starting face detection for IMG_2941.jpeg
+2025-02-24 13:08:39,204 - main - INFO - Starting object detection for IMG_2941.jpeg
+2025-02-24 13:08:39,445 - main - INFO - Starting scene classification for IMG_2941.jpeg
+2025-02-24 13:08:39,681 - main - INFO - Starting text recognition for IMG_2941.jpeg
+2025-02-24 13:08:54,682 - main - WARNING - Text recognition timed out for IMG_2941.jpeg
+2025-02-24 13:08:54,684 - main - INFO - Extracting metadata for IMG_2941.jpeg
+2025-02-24 13:08:54,690 - main - INFO - Successfully processed all analyses for IMG_2941.jpeg
+2025-02-24 13:08:54,690 - main - INFO - Added results for IMG_2941.jpeg
+2025-02-24 13:08:54,690 - main - INFO - Processing image: IMG_8987.jpeg
+2025-02-24 13:08:54,699 - main - INFO - Starting face detection for IMG_8987.jpeg
+2025-02-24 13:08:55,894 - main - INFO - Starting object detection for IMG_8987.jpeg
+2025-02-24 13:08:56,161 - main - INFO - Starting scene classification for IMG_8987.jpeg
+2025-02-24 13:08:56,313 - main - INFO - Starting text recognition for IMG_8987.jpeg
+2025-02-24 13:08:59,044 - main - INFO - Extracting metadata for IMG_8987.jpeg
+2025-02-24 13:08:59,046 - main - INFO - Successfully processed all analyses for IMG_8987.jpeg
+2025-02-24 13:08:59,046 - main - INFO - Added results for IMG_8987.jpeg
+2025-02-24 13:08:59,046 - main - INFO - Processing image: IMG_9841.JPG
+2025-02-24 13:08:59,049 - main - INFO - Starting face detection for IMG_9841.JPG
+2025-02-24 13:08:59,245 - main - INFO - Starting object detection for IMG_9841.JPG
+2025-02-24 13:08:59,511 - main - INFO - Starting scene classification for IMG_9841.JPG
+2025-02-24 13:08:59,681 - main - INFO - Starting text recognition for IMG_9841.JPG
+2025-02-24 13:09:00,489 - main - INFO - Extracting metadata for IMG_9841.JPG
+2025-02-24 13:09:00,490 - main - INFO - Successfully processed all analyses for IMG_9841.JPG
+2025-02-24 13:09:00,490 - main - INFO - Added results for IMG_9841.JPG
+2025-02-24 13:09:00,490 - main - INFO - Processing image: IMG_8247.jpeg
+2025-02-24 13:09:00,551 - main - INFO - Starting face detection for IMG_8247.jpeg
+2025-02-24 13:09:01,132 - main - INFO - Starting object detection for IMG_8247.jpeg
+2025-02-24 13:09:01,399 - main - INFO - Starting scene classification for IMG_8247.jpeg
+2025-02-24 13:09:01,561 - main - INFO - Starting text recognition for IMG_8247.jpeg
+2025-02-24 13:09:29,894 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 175')
+2025-02-24 13:09:29,895 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 166 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,905 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 162 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,909 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 171 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,909 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 167 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,913 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 179')
+2025-02-24 13:09:29,913 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 164 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,915 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 197 Error in boxClipToRectangle: box outside rectangle Error in pixScanForForeground: invalid box')
+2025-02-24 13:09:29,922 - models.inference.text_recognizer - ERROR - OCR processing error: (-2, 'Estimating resolution as 173')
+2025-02-24 13:09:33,750 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:09:33,809 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:09:34,175 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:09:34,220 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:09:34,221 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:09:34,226 - main - INFO - Starting analysis of 24 images in batches of 5
+2025-02-24 13:09:34,226 - main - INFO - Processing batch 1 (5 images)
+2025-02-24 13:09:34,226 - main - INFO - Processing image: IMG_7284.jpeg
+2025-02-24 13:09:34,262 - main - INFO - Starting face detection for IMG_7284.jpeg
+2025-02-24 13:09:34,603 - main - INFO - Starting object detection for IMG_7284.jpeg
+2025-02-24 13:09:34,842 - main - INFO - Starting scene classification for IMG_7284.jpeg
+2025-02-24 13:09:34,915 - main - INFO - Skipping text recognition for IMG_7284.jpeg
+2025-02-24 13:09:34,915 - main - INFO - Extracting metadata for IMG_7284.jpeg
+2025-02-24 13:09:34,922 - main - INFO - Successfully processed all analyses for IMG_7284.jpeg
+2025-02-24 13:09:34,922 - main - INFO - Added results for IMG_7284.jpeg
+2025-02-24 13:09:34,922 - main - INFO - Processing image: IMG_7769.jpeg
+2025-02-24 13:09:34,959 - main - INFO - Starting face detection for IMG_7769.jpeg
+2025-02-24 13:09:35,201 - main - INFO - Starting object detection for IMG_7769.jpeg
+2025-02-24 13:09:35,278 - main - INFO - Starting scene classification for IMG_7769.jpeg
+2025-02-24 13:09:35,339 - main - INFO - Skipping text recognition for IMG_7769.jpeg
+2025-02-24 13:09:35,339 - main - INFO - Extracting metadata for IMG_7769.jpeg
+2025-02-24 13:09:35,340 - main - INFO - Successfully processed all analyses for IMG_7769.jpeg
+2025-02-24 13:09:35,340 - main - INFO - Added results for IMG_7769.jpeg
+2025-02-24 13:09:35,340 - main - INFO - Processing image: IMG_0370.JPG
+2025-02-24 13:09:35,344 - main - INFO - Starting face detection for IMG_0370.JPG
+2025-02-24 13:09:35,730 - main - INFO - Starting object detection for IMG_0370.JPG
+2025-02-24 13:09:35,784 - main - INFO - Starting scene classification for IMG_0370.JPG
+2025-02-24 13:09:35,814 - main - INFO - Skipping text recognition for IMG_0370.JPG
+2025-02-24 13:09:35,814 - main - INFO - Extracting metadata for IMG_0370.JPG
+2025-02-24 13:09:35,815 - main - INFO - Successfully processed all analyses for IMG_0370.JPG
+2025-02-24 13:09:35,815 - main - INFO - Added results for IMG_0370.JPG
+2025-02-24 13:09:35,815 - main - INFO - Processing image: IMG_9448.jpeg
+2025-02-24 13:09:35,855 - main - INFO - Starting face detection for IMG_9448.jpeg
+2025-02-24 13:09:36,099 - main - INFO - Starting object detection for IMG_9448.jpeg
+2025-02-24 13:09:36,168 - main - INFO - Starting scene classification for IMG_9448.jpeg
+2025-02-24 13:09:36,229 - main - INFO - Skipping text recognition for IMG_9448.jpeg
+2025-02-24 13:09:36,230 - main - INFO - Extracting metadata for IMG_9448.jpeg
+2025-02-24 13:09:36,230 - main - INFO - Successfully processed all analyses for IMG_9448.jpeg
+2025-02-24 13:09:36,231 - main - INFO - Added results for IMG_9448.jpeg
+2025-02-24 13:09:36,231 - main - INFO - Processing image: IMG_8255.jpeg
+2025-02-24 13:09:36,259 - main - INFO - Starting face detection for IMG_8255.jpeg
+2025-02-24 13:09:36,485 - main - INFO - Starting object detection for IMG_8255.jpeg
+2025-02-24 13:09:36,557 - main - INFO - Starting scene classification for IMG_8255.jpeg
+2025-02-24 13:09:36,605 - main - INFO - Skipping text recognition for IMG_8255.jpeg
+2025-02-24 13:09:36,605 - main - INFO - Extracting metadata for IMG_8255.jpeg
+2025-02-24 13:09:36,606 - main - INFO - Successfully processed all analyses for IMG_8255.jpeg
+2025-02-24 13:09:36,606 - main - INFO - Added results for IMG_8255.jpeg
+2025-02-24 13:09:36,606 - main - INFO - Sending progress update: 20.8% complete
+2025-02-24 13:09:36,707 - main - INFO - Processing batch 2 (5 images)
+2025-02-24 13:09:36,707 - main - INFO - Processing image: IMG_9645.jpeg
+2025-02-24 13:09:36,756 - main - INFO - Starting face detection for IMG_9645.jpeg
+2025-02-24 13:09:37,036 - main - INFO - Starting object detection for IMG_9645.jpeg
+2025-02-24 13:09:37,120 - main - INFO - Starting scene classification for IMG_9645.jpeg
+2025-02-24 13:09:37,188 - main - INFO - Skipping text recognition for IMG_9645.jpeg
+2025-02-24 13:09:37,189 - main - INFO - Extracting metadata for IMG_9645.jpeg
+2025-02-24 13:09:37,189 - main - INFO - Successfully processed all analyses for IMG_9645.jpeg
+2025-02-24 13:09:37,189 - main - INFO - Added results for IMG_9645.jpeg
+2025-02-24 13:09:37,189 - main - INFO - Processing image: c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:37,250 - main - INFO - Starting face detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,034 - main - INFO - Starting object detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,116 - main - INFO - Starting scene classification for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,191 - main - INFO - Skipping text recognition for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,191 - main - INFO - Extracting metadata for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,192 - main - INFO - Successfully processed all analyses for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,192 - main - INFO - Added results for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:09:38,192 - main - INFO - Processing image: 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,203 - main - INFO - Starting face detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,799 - main - INFO - Starting object detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,864 - main - INFO - Starting scene classification for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,893 - main - INFO - Skipping text recognition for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,893 - main - INFO - Extracting metadata for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,893 - main - INFO - Successfully processed all analyses for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,893 - main - INFO - Added results for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:09:38,893 - main - INFO - Processing image: IMG_9874.PNG
+2025-02-24 13:09:38,902 - main - INFO - Starting face detection for IMG_9874.PNG
+2025-02-24 13:09:39,007 - main - INFO - Starting object detection for IMG_9874.PNG
+2025-02-24 13:09:39,056 - main - INFO - Starting scene classification for IMG_9874.PNG
+2025-02-24 13:09:39,089 - main - INFO - Skipping text recognition for IMG_9874.PNG
+2025-02-24 13:09:39,089 - main - INFO - Extracting metadata for IMG_9874.PNG
+2025-02-24 13:09:39,090 - main - INFO - Successfully processed all analyses for IMG_9874.PNG
+2025-02-24 13:09:39,090 - main - INFO - Added results for IMG_9874.PNG
+2025-02-24 13:09:39,090 - main - INFO - Processing image: IMG_9205.jpeg
+2025-02-24 13:09:39,125 - main - INFO - Starting face detection for IMG_9205.jpeg
+2025-02-24 13:09:41,945 - main - INFO - Starting object detection for IMG_9205.jpeg
+2025-02-24 13:09:42,014 - main - INFO - Starting scene classification for IMG_9205.jpeg
+2025-02-24 13:09:42,073 - main - INFO - Skipping text recognition for IMG_9205.jpeg
+2025-02-24 13:09:42,073 - main - INFO - Extracting metadata for IMG_9205.jpeg
+2025-02-24 13:09:42,074 - main - INFO - Successfully processed all analyses for IMG_9205.jpeg
+2025-02-24 13:09:42,074 - main - INFO - Added results for IMG_9205.jpeg
+2025-02-24 13:09:42,075 - main - INFO - Sending progress update: 41.7% complete
+2025-02-24 13:09:42,176 - main - INFO - Processing batch 3 (5 images)
+2025-02-24 13:09:42,177 - main - INFO - Processing image: IMG_7542.jpeg
+2025-02-24 13:09:42,320 - main - INFO - Starting face detection for IMG_7542.jpeg
+2025-02-24 13:09:42,835 - main - INFO - Starting object detection for IMG_7542.jpeg
+2025-02-24 13:09:42,926 - main - INFO - Starting scene classification for IMG_7542.jpeg
+2025-02-24 13:09:43,003 - main - INFO - Skipping text recognition for IMG_7542.jpeg
+2025-02-24 13:09:43,003 - main - INFO - Extracting metadata for IMG_7542.jpeg
+2025-02-24 13:09:43,004 - main - INFO - Successfully processed all analyses for IMG_7542.jpeg
+2025-02-24 13:09:43,004 - main - INFO - Added results for IMG_7542.jpeg
+2025-02-24 13:09:43,005 - main - INFO - Processing image: IMG_2941.jpeg
+2025-02-24 13:09:43,058 - main - INFO - Starting face detection for IMG_2941.jpeg
+2025-02-24 13:09:43,508 - main - INFO - Starting object detection for IMG_2941.jpeg
+2025-02-24 13:09:43,593 - main - INFO - Starting scene classification for IMG_2941.jpeg
+2025-02-24 13:09:43,660 - main - INFO - Skipping text recognition for IMG_2941.jpeg
+2025-02-24 13:09:43,660 - main - INFO - Extracting metadata for IMG_2941.jpeg
+2025-02-24 13:09:43,661 - main - INFO - Successfully processed all analyses for IMG_2941.jpeg
+2025-02-24 13:09:43,661 - main - INFO - Added results for IMG_2941.jpeg
+2025-02-24 13:09:43,661 - main - INFO - Processing image: IMG_8987.jpeg
+2025-02-24 13:09:43,668 - main - INFO - Starting face detection for IMG_8987.jpeg
+2025-02-24 13:09:44,085 - main - INFO - Starting object detection for IMG_8987.jpeg
+2025-02-24 13:09:44,165 - main - INFO - Starting scene classification for IMG_8987.jpeg
+2025-02-24 13:09:44,202 - main - INFO - Skipping text recognition for IMG_8987.jpeg
+2025-02-24 13:09:44,202 - main - INFO - Extracting metadata for IMG_8987.jpeg
+2025-02-24 13:09:44,203 - main - INFO - Successfully processed all analyses for IMG_8987.jpeg
+2025-02-24 13:09:44,203 - main - INFO - Added results for IMG_8987.jpeg
+2025-02-24 13:09:44,203 - main - INFO - Processing image: IMG_9841.JPG
+2025-02-24 13:09:44,206 - main - INFO - Starting face detection for IMG_9841.JPG
+2025-02-24 13:09:44,351 - main - INFO - Starting object detection for IMG_9841.JPG
+2025-02-24 13:09:44,458 - main - INFO - Starting scene classification for IMG_9841.JPG
+2025-02-24 13:09:44,490 - main - INFO - Skipping text recognition for IMG_9841.JPG
+2025-02-24 13:09:44,491 - main - INFO - Extracting metadata for IMG_9841.JPG
+2025-02-24 13:09:44,491 - main - INFO - Successfully processed all analyses for IMG_9841.JPG
+2025-02-24 13:09:44,491 - main - INFO - Added results for IMG_9841.JPG
+2025-02-24 13:09:44,491 - main - INFO - Processing image: IMG_8247.jpeg
+2025-02-24 13:09:44,539 - main - INFO - Starting face detection for IMG_8247.jpeg
+2025-02-24 13:09:44,705 - main - INFO - Starting object detection for IMG_8247.jpeg
+2025-02-24 13:09:44,800 - main - INFO - Starting scene classification for IMG_8247.jpeg
+2025-02-24 13:09:44,867 - main - INFO - Skipping text recognition for IMG_8247.jpeg
+2025-02-24 13:09:44,867 - main - INFO - Extracting metadata for IMG_8247.jpeg
+2025-02-24 13:09:44,868 - main - INFO - Successfully processed all analyses for IMG_8247.jpeg
+2025-02-24 13:09:44,876 - main - INFO - Added results for IMG_8247.jpeg
+2025-02-24 13:09:44,876 - main - INFO - Sending progress update: 62.5% complete
+2025-02-24 13:09:44,978 - main - INFO - Processing batch 4 (5 images)
+2025-02-24 13:09:44,978 - main - INFO - Processing image: 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:45,042 - main - INFO - Starting face detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,033 - main - INFO - Starting object detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,167 - main - INFO - Starting scene classification for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,269 - main - INFO - Skipping text recognition for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,269 - main - INFO - Extracting metadata for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,269 - main - INFO - Successfully processed all analyses for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,270 - main - INFO - Added results for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:09:47,270 - main - INFO - Processing image: IMG_6542.JPG
+2025-02-24 13:09:47,337 - main - INFO - Starting face detection for IMG_6542.JPG
+2025-02-24 13:09:48,677 - main - INFO - Starting object detection for IMG_6542.JPG
+2025-02-24 13:09:48,773 - main - INFO - Starting scene classification for IMG_6542.JPG
+2025-02-24 13:09:48,888 - main - INFO - Skipping text recognition for IMG_6542.JPG
+2025-02-24 13:09:48,888 - main - INFO - Extracting metadata for IMG_6542.JPG
+2025-02-24 13:09:48,889 - main - INFO - Successfully processed all analyses for IMG_6542.JPG
+2025-02-24 13:09:48,889 - main - INFO - Added results for IMG_6542.JPG
+2025-02-24 13:09:48,889 - main - INFO - Processing image: IMG_8344.jpeg
+2025-02-24 13:09:48,952 - main - INFO - Starting face detection for IMG_8344.jpeg
+2025-02-24 13:09:49,807 - main - INFO - Starting object detection for IMG_8344.jpeg
+2025-02-24 13:09:49,904 - main - INFO - Starting scene classification for IMG_8344.jpeg
+2025-02-24 13:09:49,968 - main - INFO - Skipping text recognition for IMG_8344.jpeg
+2025-02-24 13:09:49,968 - main - INFO - Extracting metadata for IMG_8344.jpeg
+2025-02-24 13:09:49,969 - main - INFO - Successfully processed all analyses for IMG_8344.jpeg
+2025-02-24 13:09:49,969 - main - INFO - Added results for IMG_8344.jpeg
+2025-02-24 13:09:49,969 - main - INFO - Processing image: IMG_9851.jpeg
+2025-02-24 13:09:49,977 - main - INFO - Starting face detection for IMG_9851.jpeg
+2025-02-24 13:09:50,126 - main - INFO - Starting object detection for IMG_9851.jpeg
+2025-02-24 13:09:50,221 - main - INFO - Starting scene classification for IMG_9851.jpeg
+2025-02-24 13:09:50,253 - main - INFO - Skipping text recognition for IMG_9851.jpeg
+2025-02-24 13:09:50,253 - main - INFO - Extracting metadata for IMG_9851.jpeg
+2025-02-24 13:09:50,253 - main - INFO - Successfully processed all analyses for IMG_9851.jpeg
+2025-02-24 13:09:50,254 - main - INFO - Added results for IMG_9851.jpeg
+2025-02-24 13:09:50,254 - main - INFO - Processing image: dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:50,263 - main - INFO - Starting face detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,107 - main - INFO - Starting object detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,178 - main - INFO - Starting scene classification for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,215 - main - INFO - Skipping text recognition for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,215 - main - INFO - Extracting metadata for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,215 - main - INFO - Successfully processed all analyses for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,215 - main - INFO - Added results for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:09:51,215 - main - INFO - Sending progress update: 83.3% complete
+2025-02-24 13:09:51,317 - main - INFO - Processing batch 5 (4 images)
+2025-02-24 13:09:51,317 - main - INFO - Processing image: IMG_3544.jpeg
+2025-02-24 13:09:51,323 - main - INFO - Starting face detection for IMG_3544.jpeg
+2025-02-24 13:09:51,629 - main - INFO - Starting object detection for IMG_3544.jpeg
+2025-02-24 13:09:51,701 - main - INFO - Starting scene classification for IMG_3544.jpeg
+2025-02-24 13:09:51,735 - main - INFO - Skipping text recognition for IMG_3544.jpeg
+2025-02-24 13:09:51,735 - main - INFO - Extracting metadata for IMG_3544.jpeg
+2025-02-24 13:09:51,736 - main - INFO - Successfully processed all analyses for IMG_3544.jpeg
+2025-02-24 13:09:51,736 - main - INFO - Added results for IMG_3544.jpeg
+2025-02-24 13:09:51,736 - main - INFO - Processing image: IMG_9149.jpeg
+2025-02-24 13:09:51,784 - main - INFO - Starting face detection for IMG_9149.jpeg
+2025-02-24 13:09:51,941 - main - INFO - Starting object detection for IMG_9149.jpeg
+2025-02-24 13:09:52,010 - main - INFO - Starting scene classification for IMG_9149.jpeg
+2025-02-24 13:09:52,073 - main - INFO - Skipping text recognition for IMG_9149.jpeg
+2025-02-24 13:09:52,073 - main - INFO - Extracting metadata for IMG_9149.jpeg
+2025-02-24 13:09:52,074 - main - INFO - Successfully processed all analyses for IMG_9149.jpeg
+2025-02-24 13:09:52,074 - main - INFO - Added results for IMG_9149.jpeg
+2025-02-24 13:09:52,074 - main - INFO - Processing image: IMG_9407.jpeg
+2025-02-24 13:09:52,095 - main - INFO - Starting face detection for IMG_9407.jpeg
+2025-02-24 13:09:52,251 - main - INFO - Starting object detection for IMG_9407.jpeg
+2025-02-24 13:09:52,310 - main - INFO - Starting scene classification for IMG_9407.jpeg
+2025-02-24 13:09:52,362 - main - INFO - Skipping text recognition for IMG_9407.jpeg
+2025-02-24 13:09:52,363 - main - INFO - Extracting metadata for IMG_9407.jpeg
+2025-02-24 13:09:52,363 - main - INFO - Successfully processed all analyses for IMG_9407.jpeg
+2025-02-24 13:09:52,363 - main - INFO - Added results for IMG_9407.jpeg
+2025-02-24 13:09:52,363 - main - INFO - Processing image: IMG_8168.jpeg
+2025-02-24 13:09:52,401 - main - INFO - Starting face detection for IMG_8168.jpeg
+2025-02-24 13:09:52,629 - main - INFO - Starting object detection for IMG_8168.jpeg
+2025-02-24 13:09:52,698 - main - INFO - Starting scene classification for IMG_8168.jpeg
+2025-02-24 13:09:52,756 - main - INFO - Skipping text recognition for IMG_8168.jpeg
+2025-02-24 13:09:52,756 - main - INFO - Extracting metadata for IMG_8168.jpeg
+2025-02-24 13:09:52,757 - main - INFO - Successfully processed all analyses for IMG_8168.jpeg
+2025-02-24 13:09:52,757 - main - INFO - Added results for IMG_8168.jpeg
+2025-02-24 13:09:52,757 - main - INFO - Sending progress update: 100.0% complete
+2025-02-24 13:09:52,859 - main - INFO - Sending final results
+2025-02-24 13:10:18,909 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:10:18,953 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:10:19,315 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:10:19,365 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:10:19,365 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:10:37,995 - main - INFO - Starting analysis of 24 images in batches of 5
+2025-02-24 13:10:37,995 - main - INFO - Processing batch 1 (5 images)
+2025-02-24 13:10:37,995 - main - INFO - Processing image: IMG_7284.jpeg
+2025-02-24 13:10:38,042 - main - INFO - Starting face detection for IMG_7284.jpeg
+2025-02-24 13:10:38,667 - main - INFO - Starting object detection for IMG_7284.jpeg
+2025-02-24 13:10:38,958 - main - INFO - Starting scene classification for IMG_7284.jpeg
+2025-02-24 13:10:39,060 - main - INFO - Skipping text recognition for IMG_7284.jpeg
+2025-02-24 13:10:39,060 - main - INFO - Extracting metadata for IMG_7284.jpeg
+2025-02-24 13:10:39,103 - main - INFO - Successfully processed all analyses for IMG_7284.jpeg
+2025-02-24 13:10:39,103 - main - INFO - Added results for IMG_7284.jpeg
+2025-02-24 13:10:39,103 - main - INFO - Processing image: IMG_7769.jpeg
+2025-02-24 13:10:39,139 - main - INFO - Starting face detection for IMG_7769.jpeg
+2025-02-24 13:10:39,510 - main - INFO - Starting object detection for IMG_7769.jpeg
+2025-02-24 13:10:39,580 - main - INFO - Starting scene classification for IMG_7769.jpeg
+2025-02-24 13:10:39,642 - main - INFO - Skipping text recognition for IMG_7769.jpeg
+2025-02-24 13:10:39,642 - main - INFO - Extracting metadata for IMG_7769.jpeg
+2025-02-24 13:10:39,643 - main - INFO - Successfully processed all analyses for IMG_7769.jpeg
+2025-02-24 13:10:39,643 - main - INFO - Added results for IMG_7769.jpeg
+2025-02-24 13:10:39,643 - main - INFO - Processing image: IMG_0370.JPG
+2025-02-24 13:10:39,647 - main - INFO - Starting face detection for IMG_0370.JPG
+2025-02-24 13:10:40,456 - main - INFO - Starting object detection for IMG_0370.JPG
+2025-02-24 13:10:40,554 - main - INFO - Starting scene classification for IMG_0370.JPG
+2025-02-24 13:10:40,620 - main - INFO - Skipping text recognition for IMG_0370.JPG
+2025-02-24 13:10:40,620 - main - INFO - Extracting metadata for IMG_0370.JPG
+2025-02-24 13:10:40,620 - main - INFO - Successfully processed all analyses for IMG_0370.JPG
+2025-02-24 13:10:40,621 - main - INFO - Added results for IMG_0370.JPG
+2025-02-24 13:10:40,621 - main - INFO - Processing image: IMG_9448.jpeg
+2025-02-24 13:10:40,665 - main - INFO - Starting face detection for IMG_9448.jpeg
+2025-02-24 13:10:41,169 - main - INFO - Starting object detection for IMG_9448.jpeg
+2025-02-24 13:10:41,265 - main - INFO - Starting scene classification for IMG_9448.jpeg
+2025-02-24 13:10:41,334 - main - INFO - Skipping text recognition for IMG_9448.jpeg
+2025-02-24 13:10:41,335 - main - INFO - Extracting metadata for IMG_9448.jpeg
+2025-02-24 13:10:41,336 - main - INFO - Successfully processed all analyses for IMG_9448.jpeg
+2025-02-24 13:10:41,336 - main - INFO - Added results for IMG_9448.jpeg
+2025-02-24 13:10:41,336 - main - INFO - Processing image: IMG_8255.jpeg
+2025-02-24 13:10:41,366 - main - INFO - Starting face detection for IMG_8255.jpeg
+2025-02-24 13:10:41,740 - main - INFO - Starting object detection for IMG_8255.jpeg
+2025-02-24 13:10:41,824 - main - INFO - Starting scene classification for IMG_8255.jpeg
+2025-02-24 13:10:41,884 - main - INFO - Skipping text recognition for IMG_8255.jpeg
+2025-02-24 13:10:41,884 - main - INFO - Extracting metadata for IMG_8255.jpeg
+2025-02-24 13:10:41,886 - main - INFO - Successfully processed all analyses for IMG_8255.jpeg
+2025-02-24 13:10:41,886 - main - INFO - Added results for IMG_8255.jpeg
+2025-02-24 13:10:41,886 - main - INFO - Sending progress update: 20.8% complete
+2025-02-24 13:10:41,987 - main - INFO - Processing batch 2 (5 images)
+2025-02-24 13:10:41,987 - main - INFO - Processing image: IMG_9645.jpeg
+2025-02-24 13:10:42,031 - main - INFO - Starting face detection for IMG_9645.jpeg
+2025-02-24 13:10:42,418 - main - INFO - Starting object detection for IMG_9645.jpeg
+2025-02-24 13:10:42,520 - main - INFO - Starting scene classification for IMG_9645.jpeg
+2025-02-24 13:10:42,599 - main - INFO - Skipping text recognition for IMG_9645.jpeg
+2025-02-24 13:10:42,600 - main - INFO - Extracting metadata for IMG_9645.jpeg
+2025-02-24 13:10:42,601 - main - INFO - Successfully processed all analyses for IMG_9645.jpeg
+2025-02-24 13:10:42,601 - main - INFO - Added results for IMG_9645.jpeg
+2025-02-24 13:10:42,601 - main - INFO - Processing image: c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:42,670 - main - INFO - Starting face detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,746 - main - INFO - Starting object detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,839 - main - INFO - Starting scene classification for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,907 - main - INFO - Skipping text recognition for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,907 - main - INFO - Extracting metadata for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,908 - main - INFO - Successfully processed all analyses for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,908 - main - INFO - Added results for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:10:43,908 - main - INFO - Processing image: 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:43,918 - main - INFO - Starting face detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,786 - main - INFO - Starting object detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,853 - main - INFO - Starting scene classification for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,884 - main - INFO - Skipping text recognition for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,884 - main - INFO - Extracting metadata for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,884 - main - INFO - Successfully processed all analyses for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,884 - main - INFO - Added results for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:10:44,884 - main - INFO - Processing image: IMG_9874.PNG
+2025-02-24 13:10:44,893 - main - INFO - Starting face detection for IMG_9874.PNG
+2025-02-24 13:10:44,974 - main - INFO - Starting object detection for IMG_9874.PNG
+2025-02-24 13:10:45,022 - main - INFO - Starting scene classification for IMG_9874.PNG
+2025-02-24 13:10:45,056 - main - INFO - Skipping text recognition for IMG_9874.PNG
+2025-02-24 13:10:45,056 - main - INFO - Extracting metadata for IMG_9874.PNG
+2025-02-24 13:10:45,057 - main - INFO - Successfully processed all analyses for IMG_9874.PNG
+2025-02-24 13:10:45,057 - main - INFO - Added results for IMG_9874.PNG
+2025-02-24 13:10:45,057 - main - INFO - Processing image: IMG_9205.jpeg
+2025-02-24 13:10:45,091 - main - INFO - Starting face detection for IMG_9205.jpeg
+2025-02-24 13:10:49,221 - main - INFO - Starting object detection for IMG_9205.jpeg
+2025-02-24 13:10:49,294 - main - INFO - Starting scene classification for IMG_9205.jpeg
+2025-02-24 13:10:49,356 - main - INFO - Skipping text recognition for IMG_9205.jpeg
+2025-02-24 13:10:49,356 - main - INFO - Extracting metadata for IMG_9205.jpeg
+2025-02-24 13:10:49,357 - main - INFO - Successfully processed all analyses for IMG_9205.jpeg
+2025-02-24 13:10:49,357 - main - INFO - Added results for IMG_9205.jpeg
+2025-02-24 13:10:49,357 - main - INFO - Sending progress update: 41.7% complete
+2025-02-24 13:10:49,458 - main - INFO - Processing batch 3 (5 images)
+2025-02-24 13:10:49,459 - main - INFO - Processing image: IMG_7542.jpeg
+2025-02-24 13:10:49,523 - main - INFO - Starting face detection for IMG_7542.jpeg
+2025-02-24 13:10:50,236 - main - INFO - Starting object detection for IMG_7542.jpeg
+2025-02-24 13:10:50,311 - main - INFO - Starting scene classification for IMG_7542.jpeg
+2025-02-24 13:10:50,374 - main - INFO - Skipping text recognition for IMG_7542.jpeg
+2025-02-24 13:10:50,374 - main - INFO - Extracting metadata for IMG_7542.jpeg
+2025-02-24 13:10:50,375 - main - INFO - Successfully processed all analyses for IMG_7542.jpeg
+2025-02-24 13:10:50,375 - main - INFO - Added results for IMG_7542.jpeg
+2025-02-24 13:10:50,375 - main - INFO - Processing image: IMG_2941.jpeg
+2025-02-24 13:10:50,427 - main - INFO - Starting face detection for IMG_2941.jpeg
+2025-02-24 13:10:51,070 - main - INFO - Starting object detection for IMG_2941.jpeg
+2025-02-24 13:10:51,200 - main - INFO - Starting scene classification for IMG_2941.jpeg
+2025-02-24 13:10:51,291 - main - INFO - Skipping text recognition for IMG_2941.jpeg
+2025-02-24 13:10:51,292 - main - INFO - Extracting metadata for IMG_2941.jpeg
+2025-02-24 13:10:51,293 - main - INFO - Successfully processed all analyses for IMG_2941.jpeg
+2025-02-24 13:10:51,293 - main - INFO - Added results for IMG_2941.jpeg
+2025-02-24 13:10:51,293 - main - INFO - Processing image: IMG_8987.jpeg
+2025-02-24 13:10:51,303 - main - INFO - Starting face detection for IMG_8987.jpeg
+2025-02-24 13:10:51,718 - main - INFO - Starting object detection for IMG_8987.jpeg
+2025-02-24 13:10:51,953 - main - INFO - Starting scene classification for IMG_8987.jpeg
+2025-02-24 13:10:51,994 - main - INFO - Skipping text recognition for IMG_8987.jpeg
+2025-02-24 13:10:51,994 - main - INFO - Extracting metadata for IMG_8987.jpeg
+2025-02-24 13:10:51,995 - main - INFO - Successfully processed all analyses for IMG_8987.jpeg
+2025-02-24 13:10:51,995 - main - INFO - Added results for IMG_8987.jpeg
+2025-02-24 13:10:51,995 - main - INFO - Processing image: IMG_9841.JPG
+2025-02-24 13:10:51,998 - main - INFO - Starting face detection for IMG_9841.JPG
+2025-02-24 13:10:52,159 - main - INFO - Starting object detection for IMG_9841.JPG
+2025-02-24 13:10:52,254 - main - INFO - Starting scene classification for IMG_9841.JPG
+2025-02-24 13:10:52,286 - main - INFO - Skipping text recognition for IMG_9841.JPG
+2025-02-24 13:10:52,286 - main - INFO - Extracting metadata for IMG_9841.JPG
+2025-02-24 13:10:52,286 - main - INFO - Successfully processed all analyses for IMG_9841.JPG
+2025-02-24 13:10:52,286 - main - INFO - Added results for IMG_9841.JPG
+2025-02-24 13:10:52,286 - main - INFO - Processing image: IMG_8247.jpeg
+2025-02-24 13:10:52,341 - main - INFO - Starting face detection for IMG_8247.jpeg
+2025-02-24 13:10:52,573 - main - INFO - Starting object detection for IMG_8247.jpeg
+2025-02-24 13:10:52,649 - main - INFO - Starting scene classification for IMG_8247.jpeg
+2025-02-24 13:10:52,712 - main - INFO - Skipping text recognition for IMG_8247.jpeg
+2025-02-24 13:10:52,712 - main - INFO - Extracting metadata for IMG_8247.jpeg
+2025-02-24 13:10:52,713 - main - INFO - Successfully processed all analyses for IMG_8247.jpeg
+2025-02-24 13:10:52,713 - main - INFO - Added results for IMG_8247.jpeg
+2025-02-24 13:10:52,713 - main - INFO - Sending progress update: 62.5% complete
+2025-02-24 13:10:52,814 - main - INFO - Processing batch 4 (5 images)
+2025-02-24 13:10:52,814 - main - INFO - Processing image: 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:52,882 - main - INFO - Starting face detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,735 - main - INFO - Starting object detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,844 - main - INFO - Starting scene classification for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,938 - main - INFO - Skipping text recognition for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,939 - main - INFO - Extracting metadata for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,939 - main - INFO - Successfully processed all analyses for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,939 - main - INFO - Added results for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:10:54,940 - main - INFO - Processing image: IMG_6542.JPG
+2025-02-24 13:10:55,019 - main - INFO - Starting face detection for IMG_6542.JPG
+2025-02-24 13:10:56,754 - main - INFO - Starting object detection for IMG_6542.JPG
+2025-02-24 13:10:56,864 - main - INFO - Starting scene classification for IMG_6542.JPG
+2025-02-24 13:10:57,005 - main - INFO - Skipping text recognition for IMG_6542.JPG
+2025-02-24 13:10:57,005 - main - INFO - Extracting metadata for IMG_6542.JPG
+2025-02-24 13:10:57,007 - main - INFO - Successfully processed all analyses for IMG_6542.JPG
+2025-02-24 13:10:57,007 - main - INFO - Added results for IMG_6542.JPG
+2025-02-24 13:10:57,007 - main - INFO - Processing image: IMG_8344.jpeg
+2025-02-24 13:10:57,057 - main - INFO - Starting face detection for IMG_8344.jpeg
+2025-02-24 13:10:57,719 - main - INFO - Starting object detection for IMG_8344.jpeg
+2025-02-24 13:10:57,804 - main - INFO - Starting scene classification for IMG_8344.jpeg
+2025-02-24 13:10:57,869 - main - INFO - Skipping text recognition for IMG_8344.jpeg
+2025-02-24 13:10:57,869 - main - INFO - Extracting metadata for IMG_8344.jpeg
+2025-02-24 13:10:57,870 - main - INFO - Successfully processed all analyses for IMG_8344.jpeg
+2025-02-24 13:10:57,870 - main - INFO - Added results for IMG_8344.jpeg
+2025-02-24 13:10:57,870 - main - INFO - Processing image: IMG_9851.jpeg
+2025-02-24 13:10:57,878 - main - INFO - Starting face detection for IMG_9851.jpeg
+2025-02-24 13:10:58,020 - main - INFO - Starting object detection for IMG_9851.jpeg
+2025-02-24 13:10:58,106 - main - INFO - Starting scene classification for IMG_9851.jpeg
+2025-02-24 13:10:58,144 - main - INFO - Skipping text recognition for IMG_9851.jpeg
+2025-02-24 13:10:58,144 - main - INFO - Extracting metadata for IMG_9851.jpeg
+2025-02-24 13:10:58,144 - main - INFO - Successfully processed all analyses for IMG_9851.jpeg
+2025-02-24 13:10:58,144 - main - INFO - Added results for IMG_9851.jpeg
+2025-02-24 13:10:58,144 - main - INFO - Processing image: dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,154 - main - INFO - Starting face detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,790 - main - INFO - Starting object detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,863 - main - INFO - Starting scene classification for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,897 - main - INFO - Skipping text recognition for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,897 - main - INFO - Extracting metadata for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,897 - main - INFO - Successfully processed all analyses for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,897 - main - INFO - Added results for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:10:58,897 - main - INFO - Sending progress update: 83.3% complete
+2025-02-24 13:10:58,999 - main - INFO - Processing batch 5 (4 images)
+2025-02-24 13:10:58,999 - main - INFO - Processing image: IMG_3544.jpeg
+2025-02-24 13:10:59,006 - main - INFO - Starting face detection for IMG_3544.jpeg
+2025-02-24 13:10:59,527 - main - INFO - Starting object detection for IMG_3544.jpeg
+2025-02-24 13:10:59,617 - main - INFO - Starting scene classification for IMG_3544.jpeg
+2025-02-24 13:10:59,696 - main - INFO - Skipping text recognition for IMG_3544.jpeg
+2025-02-24 13:10:59,696 - main - INFO - Extracting metadata for IMG_3544.jpeg
+2025-02-24 13:10:59,697 - main - INFO - Successfully processed all analyses for IMG_3544.jpeg
+2025-02-24 13:10:59,697 - main - INFO - Added results for IMG_3544.jpeg
+2025-02-24 13:10:59,697 - main - INFO - Processing image: IMG_9149.jpeg
+2025-02-24 13:10:59,746 - main - INFO - Starting face detection for IMG_9149.jpeg
+2025-02-24 13:10:59,936 - main - INFO - Starting object detection for IMG_9149.jpeg
+2025-02-24 13:11:00,020 - main - INFO - Starting scene classification for IMG_9149.jpeg
+2025-02-24 13:11:00,097 - main - INFO - Skipping text recognition for IMG_9149.jpeg
+2025-02-24 13:11:00,097 - main - INFO - Extracting metadata for IMG_9149.jpeg
+2025-02-24 13:11:00,098 - main - INFO - Successfully processed all analyses for IMG_9149.jpeg
+2025-02-24 13:11:00,098 - main - INFO - Added results for IMG_9149.jpeg
+2025-02-24 13:11:00,098 - main - INFO - Processing image: IMG_9407.jpeg
+2025-02-24 13:11:00,122 - main - INFO - Starting face detection for IMG_9407.jpeg
+2025-02-24 13:11:00,373 - main - INFO - Starting object detection for IMG_9407.jpeg
+2025-02-24 13:11:00,455 - main - INFO - Starting scene classification for IMG_9407.jpeg
+2025-02-24 13:11:00,516 - main - INFO - Skipping text recognition for IMG_9407.jpeg
+2025-02-24 13:11:00,516 - main - INFO - Extracting metadata for IMG_9407.jpeg
+2025-02-24 13:11:00,517 - main - INFO - Successfully processed all analyses for IMG_9407.jpeg
+2025-02-24 13:11:00,517 - main - INFO - Added results for IMG_9407.jpeg
+2025-02-24 13:11:00,517 - main - INFO - Processing image: IMG_8168.jpeg
+2025-02-24 13:11:00,554 - main - INFO - Starting face detection for IMG_8168.jpeg
+2025-02-24 13:11:00,816 - main - INFO - Starting object detection for IMG_8168.jpeg
+2025-02-24 13:11:00,895 - main - INFO - Starting scene classification for IMG_8168.jpeg
+2025-02-24 13:11:00,961 - main - INFO - Skipping text recognition for IMG_8168.jpeg
+2025-02-24 13:11:00,961 - main - INFO - Extracting metadata for IMG_8168.jpeg
+2025-02-24 13:11:00,962 - main - INFO - Successfully processed all analyses for IMG_8168.jpeg
+2025-02-24 13:11:00,962 - main - INFO - Added results for IMG_8168.jpeg
+2025-02-24 13:11:00,962 - main - INFO - Sending progress update: 100.0% complete
+2025-02-24 13:11:01,063 - main - INFO - Sending final results
+2025-02-24 13:12:05,932 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:12:05,971 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:12:06,323 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:12:06,378 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:12:06,378 - models.inference - INFO - All models initialized successfully
+2025-02-24 13:12:18,423 - main - INFO - Starting analysis of 24 images
+2025-02-24 13:12:18,423 - main - INFO - Processing image: IMG_7284.jpeg
+2025-02-24 13:12:18,472 - main - INFO - Starting face detection for IMG_7284.jpeg
+2025-02-24 13:12:19,117 - main - INFO - Starting object detection for IMG_7284.jpeg
+2025-02-24 13:12:19,405 - main - INFO - Starting scene classification for IMG_7284.jpeg
+2025-02-24 13:12:19,501 - main - INFO - Skipping text recognition for IMG_7284.jpeg
+2025-02-24 13:12:19,501 - main - INFO - Extracting metadata for IMG_7284.jpeg
+2025-02-24 13:12:19,550 - main - INFO - Successfully processed all analyses for IMG_7284.jpeg
+2025-02-24 13:12:19,550 - main - INFO - Progress: 4.2% (1/24)
+2025-02-24 13:12:19,651 - main - INFO - Processing image: IMG_7769.jpeg
+2025-02-24 13:12:19,687 - main - INFO - Starting face detection for IMG_7769.jpeg
+2025-02-24 13:12:20,046 - main - INFO - Starting object detection for IMG_7769.jpeg
+2025-02-24 13:12:20,113 - main - INFO - Starting scene classification for IMG_7769.jpeg
+2025-02-24 13:12:20,171 - main - INFO - Skipping text recognition for IMG_7769.jpeg
+2025-02-24 13:12:20,171 - main - INFO - Extracting metadata for IMG_7769.jpeg
+2025-02-24 13:12:20,172 - main - INFO - Successfully processed all analyses for IMG_7769.jpeg
+2025-02-24 13:12:20,172 - main - INFO - Progress: 8.3% (2/24)
+2025-02-24 13:12:20,274 - main - INFO - Processing image: IMG_0370.JPG
+2025-02-24 13:12:20,277 - main - INFO - Starting face detection for IMG_0370.JPG
+2025-02-24 13:12:20,908 - main - INFO - Starting object detection for IMG_0370.JPG
+2025-02-24 13:12:20,956 - main - INFO - Starting scene classification for IMG_0370.JPG
+2025-02-24 13:12:20,985 - main - INFO - Skipping text recognition for IMG_0370.JPG
+2025-02-24 13:12:20,985 - main - INFO - Extracting metadata for IMG_0370.JPG
+2025-02-24 13:12:20,986 - main - INFO - Successfully processed all analyses for IMG_0370.JPG
+2025-02-24 13:12:20,986 - main - INFO - Progress: 12.5% (3/24)
+2025-02-24 13:12:21,087 - main - INFO - Processing image: IMG_9448.jpeg
+2025-02-24 13:12:21,135 - main - INFO - Starting face detection for IMG_9448.jpeg
+2025-02-24 13:12:21,576 - main - INFO - Starting object detection for IMG_9448.jpeg
+2025-02-24 13:12:21,652 - main - INFO - Starting scene classification for IMG_9448.jpeg
+2025-02-24 13:12:21,718 - main - INFO - Skipping text recognition for IMG_9448.jpeg
+2025-02-24 13:12:21,718 - main - INFO - Extracting metadata for IMG_9448.jpeg
+2025-02-24 13:12:21,719 - main - INFO - Successfully processed all analyses for IMG_9448.jpeg
+2025-02-24 13:12:21,719 - main - INFO - Progress: 16.7% (4/24)
+2025-02-24 13:12:21,820 - main - INFO - Processing image: IMG_8255.jpeg
+2025-02-24 13:12:21,852 - main - INFO - Starting face detection for IMG_8255.jpeg
+2025-02-24 13:12:22,188 - main - INFO - Starting object detection for IMG_8255.jpeg
+2025-02-24 13:12:22,276 - main - INFO - Starting scene classification for IMG_8255.jpeg
+2025-02-24 13:12:22,331 - main - INFO - Skipping text recognition for IMG_8255.jpeg
+2025-02-24 13:12:22,331 - main - INFO - Extracting metadata for IMG_8255.jpeg
+2025-02-24 13:12:22,332 - main - INFO - Successfully processed all analyses for IMG_8255.jpeg
+2025-02-24 13:12:22,332 - main - INFO - Progress: 20.8% (5/24)
+2025-02-24 13:12:22,433 - main - INFO - Processing image: IMG_9645.jpeg
+2025-02-24 13:12:22,479 - main - INFO - Starting face detection for IMG_9645.jpeg
+2025-02-24 13:12:22,738 - main - INFO - Starting object detection for IMG_9645.jpeg
+2025-02-24 13:12:22,817 - main - INFO - Starting scene classification for IMG_9645.jpeg
+2025-02-24 13:12:22,881 - main - INFO - Skipping text recognition for IMG_9645.jpeg
+2025-02-24 13:12:22,881 - main - INFO - Extracting metadata for IMG_9645.jpeg
+2025-02-24 13:12:22,882 - main - INFO - Successfully processed all analyses for IMG_9645.jpeg
+2025-02-24 13:12:22,882 - main - INFO - Progress: 25.0% (6/24)
+2025-02-24 13:12:22,983 - main - INFO - Processing image: c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:23,045 - main - INFO - Starting face detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,384 - main - INFO - Starting object detection for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,506 - main - INFO - Starting scene classification for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,624 - main - INFO - Skipping text recognition for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,624 - main - INFO - Extracting metadata for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,625 - main - INFO - Successfully processed all analyses for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg
+2025-02-24 13:12:24,625 - main - INFO - Progress: 29.2% (7/24)
+2025-02-24 13:12:24,726 - main - INFO - Processing image: 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:24,736 - main - INFO - Starting face detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,745 - main - INFO - Starting object detection for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,821 - main - INFO - Starting scene classification for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,853 - main - INFO - Skipping text recognition for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,853 - main - INFO - Extracting metadata for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,854 - main - INFO - Successfully processed all analyses for 577a7ff1-8b09-4172-8012-f84a6b3846e9.jpg
+2025-02-24 13:12:25,854 - main - INFO - Progress: 33.3% (8/24)
+2025-02-24 13:12:25,954 - main - INFO - Processing image: IMG_9874.PNG
+2025-02-24 13:12:25,964 - main - INFO - Starting face detection for IMG_9874.PNG
+2025-02-24 13:12:26,125 - main - INFO - Starting object detection for IMG_9874.PNG
+2025-02-24 13:12:26,187 - main - INFO - Starting scene classification for IMG_9874.PNG
+2025-02-24 13:12:26,223 - main - INFO - Skipping text recognition for IMG_9874.PNG
+2025-02-24 13:12:26,223 - main - INFO - Extracting metadata for IMG_9874.PNG
+2025-02-24 13:12:26,224 - main - INFO - Successfully processed all analyses for IMG_9874.PNG
+2025-02-24 13:12:26,224 - main - INFO - Progress: 37.5% (9/24)
+2025-02-24 13:12:26,324 - main - INFO - Processing image: IMG_9205.jpeg
+2025-02-24 13:12:26,361 - main - INFO - Starting face detection for IMG_9205.jpeg
+2025-02-24 13:12:30,770 - main - INFO - Starting object detection for IMG_9205.jpeg
+2025-02-24 13:12:30,866 - main - INFO - Starting scene classification for IMG_9205.jpeg
+2025-02-24 13:12:30,951 - main - INFO - Skipping text recognition for IMG_9205.jpeg
+2025-02-24 13:12:30,951 - main - INFO - Extracting metadata for IMG_9205.jpeg
+2025-02-24 13:12:30,952 - main - INFO - Successfully processed all analyses for IMG_9205.jpeg
+2025-02-24 13:12:30,952 - main - INFO - Progress: 41.7% (10/24)
+2025-02-24 13:12:31,053 - main - INFO - Processing image: IMG_7542.jpeg
+2025-02-24 13:12:31,108 - main - INFO - Starting face detection for IMG_7542.jpeg
+2025-02-24 13:12:31,584 - main - INFO - Starting object detection for IMG_7542.jpeg
+2025-02-24 13:12:31,668 - main - INFO - Starting scene classification for IMG_7542.jpeg
+2025-02-24 13:12:31,734 - main - INFO - Skipping text recognition for IMG_7542.jpeg
+2025-02-24 13:12:31,734 - main - INFO - Extracting metadata for IMG_7542.jpeg
+2025-02-24 13:12:31,735 - main - INFO - Successfully processed all analyses for IMG_7542.jpeg
+2025-02-24 13:12:31,735 - main - INFO - Progress: 45.8% (11/24)
+2025-02-24 13:12:31,836 - main - INFO - Processing image: IMG_2941.jpeg
+2025-02-24 13:12:31,893 - main - INFO - Starting face detection for IMG_2941.jpeg
+2025-02-24 13:12:32,724 - main - INFO - Starting object detection for IMG_2941.jpeg
+2025-02-24 13:12:32,852 - main - INFO - Starting scene classification for IMG_2941.jpeg
+2025-02-24 13:12:32,946 - main - INFO - Skipping text recognition for IMG_2941.jpeg
+2025-02-24 13:12:32,946 - main - INFO - Extracting metadata for IMG_2941.jpeg
+2025-02-24 13:12:32,947 - main - INFO - Successfully processed all analyses for IMG_2941.jpeg
+2025-02-24 13:12:32,947 - main - INFO - Progress: 50.0% (12/24)
+2025-02-24 13:12:33,048 - main - INFO - Processing image: IMG_8987.jpeg
+2025-02-24 13:12:33,092 - main - INFO - Starting face detection for IMG_8987.jpeg
+2025-02-24 13:12:33,870 - main - INFO - Starting object detection for IMG_8987.jpeg
+2025-02-24 13:12:33,960 - main - INFO - Starting scene classification for IMG_8987.jpeg
+2025-02-24 13:12:33,993 - main - INFO - Skipping text recognition for IMG_8987.jpeg
+2025-02-24 13:12:33,993 - main - INFO - Extracting metadata for IMG_8987.jpeg
+2025-02-24 13:12:33,994 - main - INFO - Successfully processed all analyses for IMG_8987.jpeg
+2025-02-24 13:12:33,994 - main - INFO - Progress: 54.2% (13/24)
+2025-02-24 13:12:34,095 - main - INFO - Processing image: IMG_9841.JPG
+2025-02-24 13:12:34,098 - main - INFO - Starting face detection for IMG_9841.JPG
+2025-02-24 13:12:34,225 - main - INFO - Starting object detection for IMG_9841.JPG
+2025-02-24 13:12:34,310 - main - INFO - Starting scene classification for IMG_9841.JPG
+2025-02-24 13:12:34,339 - main - INFO - Skipping text recognition for IMG_9841.JPG
+2025-02-24 13:12:34,339 - main - INFO - Extracting metadata for IMG_9841.JPG
+2025-02-24 13:12:34,339 - main - INFO - Successfully processed all analyses for IMG_9841.JPG
+2025-02-24 13:12:34,339 - main - INFO - Progress: 58.3% (14/24)
+2025-02-24 13:12:34,440 - main - INFO - Processing image: IMG_8247.jpeg
+2025-02-24 13:12:34,500 - main - INFO - Starting face detection for IMG_8247.jpeg
+2025-02-24 13:12:34,755 - main - INFO - Starting object detection for IMG_8247.jpeg
+2025-02-24 13:12:34,827 - main - INFO - Starting scene classification for IMG_8247.jpeg
+2025-02-24 13:12:34,890 - main - INFO - Skipping text recognition for IMG_8247.jpeg
+2025-02-24 13:12:34,890 - main - INFO - Extracting metadata for IMG_8247.jpeg
+2025-02-24 13:12:34,891 - main - INFO - Successfully processed all analyses for IMG_8247.jpeg
+2025-02-24 13:12:34,891 - main - INFO - Progress: 62.5% (15/24)
+2025-02-24 13:12:34,992 - main - INFO - Processing image: 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:35,058 - main - INFO - Starting face detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,839 - main - INFO - Starting object detection for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,924 - main - INFO - Starting scene classification for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,996 - main - INFO - Skipping text recognition for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,997 - main - INFO - Extracting metadata for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,997 - main - INFO - Successfully processed all analyses for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg
+2025-02-24 13:12:36,997 - main - INFO - Progress: 66.7% (16/24)
+2025-02-24 13:12:37,098 - main - INFO - Processing image: IMG_6542.JPG
+2025-02-24 13:12:37,191 - main - INFO - Starting face detection for IMG_6542.JPG
+2025-02-24 13:12:38,771 - main - INFO - Starting object detection for IMG_6542.JPG
+2025-02-24 13:12:38,915 - main - INFO - Starting scene classification for IMG_6542.JPG
+2025-02-24 13:12:39,052 - main - INFO - Skipping text recognition for IMG_6542.JPG
+2025-02-24 13:12:39,052 - main - INFO - Extracting metadata for IMG_6542.JPG
+2025-02-24 13:12:39,054 - main - INFO - Successfully processed all analyses for IMG_6542.JPG
+2025-02-24 13:12:39,054 - main - INFO - Progress: 70.8% (17/24)
+2025-02-24 13:12:39,155 - main - INFO - Processing image: IMG_8344.jpeg
+2025-02-24 13:12:39,210 - main - INFO - Starting face detection for IMG_8344.jpeg
+2025-02-24 13:12:39,798 - main - INFO - Starting object detection for IMG_8344.jpeg
+2025-02-24 13:12:39,883 - main - INFO - Starting scene classification for IMG_8344.jpeg
+2025-02-24 13:12:39,952 - main - INFO - Skipping text recognition for IMG_8344.jpeg
+2025-02-24 13:12:39,952 - main - INFO - Extracting metadata for IMG_8344.jpeg
+2025-02-24 13:12:39,953 - main - INFO - Successfully processed all analyses for IMG_8344.jpeg
+2025-02-24 13:12:39,953 - main - INFO - Progress: 75.0% (18/24)
+2025-02-24 13:12:40,054 - main - INFO - Processing image: IMG_9851.jpeg
+2025-02-24 13:12:40,062 - main - INFO - Starting face detection for IMG_9851.jpeg
+2025-02-24 13:12:40,210 - main - INFO - Starting object detection for IMG_9851.jpeg
+2025-02-24 13:12:40,294 - main - INFO - Starting scene classification for IMG_9851.jpeg
+2025-02-24 13:12:40,325 - main - INFO - Skipping text recognition for IMG_9851.jpeg
+2025-02-24 13:12:40,325 - main - INFO - Extracting metadata for IMG_9851.jpeg
+2025-02-24 13:12:40,326 - main - INFO - Successfully processed all analyses for IMG_9851.jpeg
+2025-02-24 13:12:40,326 - main - INFO - Progress: 79.2% (19/24)
+2025-02-24 13:12:40,427 - main - INFO - Processing image: dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:40,437 - main - INFO - Starting face detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,119 - main - INFO - Starting object detection for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,201 - main - INFO - Starting scene classification for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,248 - main - INFO - Skipping text recognition for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,248 - main - INFO - Extracting metadata for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,249 - main - INFO - Successfully processed all analyses for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg
+2025-02-24 13:12:41,249 - main - INFO - Progress: 83.3% (20/24)
+2025-02-24 13:12:41,349 - main - INFO - Processing image: IMG_3544.jpeg
+2025-02-24 13:12:41,356 - main - INFO - Starting face detection for IMG_3544.jpeg
+2025-02-24 13:12:41,745 - main - INFO - Starting object detection for IMG_3544.jpeg
+2025-02-24 13:12:41,823 - main - INFO - Starting scene classification for IMG_3544.jpeg
+2025-02-24 13:12:41,859 - main - INFO - Skipping text recognition for IMG_3544.jpeg
+2025-02-24 13:12:41,860 - main - INFO - Extracting metadata for IMG_3544.jpeg
+2025-02-24 13:12:41,860 - main - INFO - Successfully processed all analyses for IMG_3544.jpeg
+2025-02-24 13:12:41,860 - main - INFO - Progress: 87.5% (21/24)
+2025-02-24 13:12:41,962 - main - INFO - Processing image: IMG_9149.jpeg
+2025-02-24 13:12:42,010 - main - INFO - Starting face detection for IMG_9149.jpeg
+2025-02-24 13:12:42,240 - main - INFO - Starting object detection for IMG_9149.jpeg
+2025-02-24 13:12:42,310 - main - INFO - Starting scene classification for IMG_9149.jpeg
+2025-02-24 13:12:42,378 - main - INFO - Skipping text recognition for IMG_9149.jpeg
+2025-02-24 13:12:42,378 - main - INFO - Extracting metadata for IMG_9149.jpeg
+2025-02-24 13:12:42,379 - main - INFO - Successfully processed all analyses for IMG_9149.jpeg
+2025-02-24 13:12:42,379 - main - INFO - Progress: 91.7% (22/24)
+2025-02-24 13:12:42,480 - main - INFO - Processing image: IMG_9407.jpeg
+2025-02-24 13:12:42,505 - main - INFO - Starting face detection for IMG_9407.jpeg
+2025-02-24 13:12:42,742 - main - INFO - Starting object detection for IMG_9407.jpeg
+2025-02-24 13:12:42,841 - main - INFO - Starting scene classification for IMG_9407.jpeg
+2025-02-24 13:12:42,897 - main - INFO - Skipping text recognition for IMG_9407.jpeg
+2025-02-24 13:12:42,897 - main - INFO - Extracting metadata for IMG_9407.jpeg
+2025-02-24 13:12:42,898 - main - INFO - Successfully processed all analyses for IMG_9407.jpeg
+2025-02-24 13:12:42,898 - main - INFO - Progress: 95.8% (23/24)
+2025-02-24 13:12:42,999 - main - INFO - Processing image: IMG_8168.jpeg
+2025-02-24 13:12:43,036 - main - INFO - Starting face detection for IMG_8168.jpeg
+2025-02-24 13:12:43,322 - main - INFO - Starting object detection for IMG_8168.jpeg
+2025-02-24 13:12:43,402 - main - INFO - Starting scene classification for IMG_8168.jpeg
+2025-02-24 13:12:43,471 - main - INFO - Skipping text recognition for IMG_8168.jpeg
+2025-02-24 13:12:43,471 - main - INFO - Extracting metadata for IMG_8168.jpeg
+2025-02-24 13:12:43,472 - main - INFO - Successfully processed all analyses for IMG_8168.jpeg
+2025-02-24 13:12:43,472 - main - INFO - Progress: 100.0% (24/24)
+2025-02-24 13:12:43,573 - main - INFO - Analysis complete, sending final results
+2025-02-24 13:13:42,141 - models.inference.face_detector - INFO - Face detector initialized successfully
+2025-02-24 13:13:42,179 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-02-24 13:13:42,524 - models.inference.scene_classifier - INFO - Places365 model initialized successfully
+2025-02-24 13:13:42,590 - models.inference.text_recognizer - INFO - Tesseract initialized successfully
+2025-02-24 13:13:42,590 - models.inference - INFO - All models initialized successfully
