@@ -4,16 +4,18 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+interface ImageData {
+  filename: string;
+  metadata: {
+    gps: {
+      latitude: number;
+      longitude: number;
+    } | null;
+  };
+}
+
 interface MapClientProps {
-  images: Array<{
-    filename: string;
-    metadata: {
-      gps: {
-        latitude: number;
-        longitude: number;
-      } | null;
-    };
-  }>;
+  images: ImageData[];
   center: [number, number];
   bounds: [[number, number], [number, number]];
 }
@@ -25,175 +27,72 @@ const MapClient = ({ images, center, bounds }: MapClientProps) => {
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Custom map style
-    const mapStyle = {
-      styles: [
-        {
-          elementType: "geometry",
-          stylers: [{ color: "#f5f5f5" }],
-        },
-        {
-          elementType: "labels.icon",
-          stylers: [{ visibility: "off" }],
-        },
-        {
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#616161" }],
-        },
-        {
-          elementType: "labels.text.stroke",
-          stylers: [{ color: "#f5f5f5" }],
-        },
-        {
-          featureType: "administrative.land_parcel",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#bdbdbd" }],
-        },
-        {
-          featureType: "poi",
-          elementType: "geometry",
-          stylers: [{ color: "#eeeeee" }],
-        },
-        {
-          featureType: "poi",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#757575" }],
-        },
-        {
-          featureType: "poi.park",
-          elementType: "geometry",
-          stylers: [{ color: "#e5e5e5" }],
-        },
-        {
-          featureType: "poi.park",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#9e9e9e" }],
-        },
-        {
-          featureType: "road",
-          elementType: "geometry",
-          stylers: [{ color: "#ffffff" }],
-        },
-        {
-          featureType: "road.arterial",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#757575" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "geometry",
-          stylers: [{ color: "#dadada" }],
-        },
-        {
-          featureType: "road.highway",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#616161" }],
-        },
-        {
-          featureType: "road.local",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#9e9e9e" }],
-        },
-        {
-          featureType: "transit.line",
-          elementType: "geometry",
-          stylers: [{ color: "#e5e5e5" }],
-        },
-        {
-          featureType: "transit.station",
-          elementType: "geometry",
-          stylers: [{ color: "#eeeeee" }],
-        },
-        {
-          featureType: "water",
-          elementType: "geometry",
-          stylers: [{ color: "#c9c9c9" }],
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#9e9e9e" }],
-        },
-      ],
-    };
+    // Dark map style with attribution
+    const mapStyle = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-    // Initialize map
+    // Initialize map if not already initialized
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current, {
-        zoomControl: false, // Hide default zoom controls
-        attributionControl: false // Hide attribution
+        zoomControl: false,
+        center: center,
+        layers: [
+          L.tileLayer(mapStyle, {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          })
+        ]
       });
 
-      // Use a minimal tile layer
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: 'OpenStreetMap, CartoDB'
-      }).addTo(mapRef.current);
-
-      // Add custom zoom control to top right
+      // Add zoom control with custom styling
       L.control.zoom({
-        position: 'topright'
+        position: 'bottomright'
       }).addTo(mapRef.current);
 
-      // Add minimal attribution to bottom right
-      L.control.attribution({
-        position: 'bottomright',
-        prefix: ''
-      }).addTo(mapRef.current);
-    }
+      // Create custom icon for markers
+      const icon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div class="marker-inner"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
 
-    // Create a LatLngBounds object and fit the map to it
-    const latLngBounds = L.latLngBounds(bounds);
-    mapRef.current.fitBounds(latLngBounds, {
-      padding: [50, 50],
-      maxZoom: 16
-    });
+      // Fit bounds if provided
+      if (bounds) {
+        mapRef.current.fitBounds(bounds);
+      }
+      // Create layer group for markers
+      const markerGroup = L.layerGroup().addTo(mapRef.current);
 
-    // Create custom marker icon
-    const icon = L.divIcon({
-      className: 'custom-marker',
-      html: '<div class="marker-inner"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
+      // Add markers for images with GPS data
+      const imagesWithGps = images.filter((img): img is ImageData & { metadata: { gps: NonNullable<ImageData['metadata']['gps']> } } => 
+        img.metadata.gps !== null
+      );
 
-    // Clear existing markers
-    if (mapRef.current) {
-      mapRef.current.eachLayer((layer) => {
-        if (layer instanceof L.Marker) {
-          mapRef.current!.removeLayer(layer);
-        }
+      imagesWithGps.forEach(image => {
+        const marker = L.marker(
+          [image.metadata.gps.latitude, image.metadata.gps.longitude],
+          { icon }
+        );
+        
+        // Create custom popup
+        const popupContent = `
+          <div class="custom-popup">
+            <img src="http://localhost:8000/images/${image.filename}" alt="${image.filename}" class="popup-image" />
+            <div class="popup-filename">${image.filename}</div>
+          </div>
+        `;
+        
+        const popup = L.popup({
+          className: 'custom-popup-container',
+          closeButton: false,
+          maxWidth: 300,
+          minWidth: 200,
+        }).setContent(popupContent);
+
+        marker.bindPopup(popup);
+        marker.addTo(markerGroup);
       });
     }
-
-    // Add markers for images with GPS data
-    images
-      .filter(img => img.metadata.gps !== null)
-      .forEach(image => {
-        if (image.metadata.gps && mapRef.current) {
-          const marker = L.marker(
-            [image.metadata.gps.latitude, image.metadata.gps.longitude],
-            { icon }
-          );
-          
-          // Create custom popup
-          const popupContent = `
-            <div class="custom-popup">
-              <img src="http://localhost:8000/images/${image.filename}" alt="${image.filename}" class="popup-image" />
-              <div class="popup-filename">${image.filename}</div>
-            </div>
-          `;
-          
-          const popup = L.popup({
-            className: 'custom-popup-container',
-            closeButton: false,
-            maxWidth: 300,
-            minWidth: 200,
-          }).setContent(popupContent);
-
-          marker.bindPopup(popup);
-          marker.addTo(mapRef.current);
-        }
-      });
 
     // Add custom styles to the document
     const style = document.createElement('style');
@@ -204,20 +103,24 @@ const MapClient = ({ images, center, bounds }: MapClientProps) => {
       .marker-inner {
         width: 12px;
         height: 12px;
-        background: #007AFF;
+        background: #6366f1;
         border-radius: 50%;
-        box-shadow: 0 0 0 2px white;
-        transition: transform 0.2s ease;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(8px);
       }
       .marker-inner:hover {
         transform: scale(1.2);
+        background: #818cf8;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
       }
       .custom-popup-container {
-        background: white;
-        border-radius: 8px;
+        background: rgba(17, 24, 39, 0.95);
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
       }
       .custom-popup {
         padding: 0;
@@ -226,51 +129,61 @@ const MapClient = ({ images, center, bounds }: MapClientProps) => {
         width: 100%;
         height: 200px;
         object-fit: cover;
-        border-radius: 8px 8px 0 0;
+        border-radius: 12px 12px 0 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
       .popup-filename {
         padding: 12px;
         font-size: 14px;
-        color: #333;
+        color: rgba(255, 255, 255, 0.9);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        background: rgba(17, 24, 39, 0.95);
       }
       .leaflet-popup-content-wrapper {
         padding: 0;
-        border-radius: 8px;
+        border-radius: 12px;
+        background: transparent;
       }
       .leaflet-popup-content {
         margin: 0;
       }
       .leaflet-popup-tip {
-        background: white;
+        background: rgba(17, 24, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
       }
       .leaflet-control-zoom {
         border: none !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+        border-radius: 8px !important;
+        overflow: hidden;
       }
       .leaflet-control-zoom a {
-        background: white !important;
-        color: #333 !important;
-        border: none !important;
+        background: rgba(17, 24, 39, 0.95) !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(12px);
       }
       .leaflet-control-zoom a:hover {
-        background: #f5f5f5 !important;
+        background: rgba(31, 41, 55, 0.95) !important;
       }
     `;
     document.head.appendChild(style);
 
+    // Cleanup function
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
-      document.head.removeChild(style);
+      if (style.parentNode === document.head) {
+        document.head.removeChild(style);
+      }
     };
   }, [images, center, bounds]);
 
-  return <div ref={mapContainerRef} className="h-full w-full" />;
+  return <div ref={mapContainerRef} className="h-full w-full rounded-lg overflow-hidden" />;
 };
 
 export default MapClient;

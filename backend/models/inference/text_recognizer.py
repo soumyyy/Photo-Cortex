@@ -1,232 +1,280 @@
-import numpy as np
-from typing import List, Dict, Any, Optional
-import logging
-import cv2
-from pathlib import Path
 import pytesseract
+import cv2
+import numpy as np
 from PIL import Image
-
-logger = logging.getLogger(__name__)
+import logging
+from typing import Dict, List
+import os
+from pathlib import Path
 
 class TextRecognizer:
-    def __init__(self):
-        """Initialize text recognition model."""
-        self.initialized = False
-        try:
-            # Test if tesseract is installed
-            pytesseract.get_tesseract_version()
-            self.initialized = True
-            logger.info("Tesseract initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing Tesseract: {str(e)}")
-            logger.warning("Make sure Tesseract is installed on your system")
+    def sanitize_text(self, text: str) -> str:
+        """Sanitize text to prevent JSON encoding issues."""
+        if not isinstance(text, str):
+            return ""
+        
+        # Replace problematic characters
+        text = text.replace('\\', '\\\\')
+        text = text.replace('"', '\\"')
+        text = text.replace('\n', ' ')
+        text = text.replace('\r', ' ')
+        text = text.replace('\t', ' ')
+        
+        # Remove any non-printable characters
+        text = ''.join(char for char in text if char.isprintable())
+        
+        return text.strip()
 
-    def get_text_summary(self, text_blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate a summary of detected text blocks."""
-        if not text_blocks:
-            return {
-                "total_blocks": 0,
-                "total_words": 0,
-                "average_confidence": 0,
-                "text_content": ""
-            }
-
-        total_blocks = len(text_blocks)
-        text_content = " ".join(block["text"] for block in text_blocks)
-        words = text_content.split()
-        total_words = len(words)
-        average_confidence = sum(block["confidence"] for block in text_blocks) / total_blocks if total_blocks > 0 else 0
-
-        return {
-            "total_blocks": total_blocks,
-            "total_words": total_words,
-            "average_confidence": average_confidence,
-            "text_content": text_content
-        }
-
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """Preprocess image for better text detection."""
-        # Convert to grayscale if needed
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image
-
-        # Apply adaptive thresholding
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-            cv2.THRESH_BINARY, 11, 2
-        )
-
-        # Noise removal
-        denoised = cv2.fastNlMeansDenoising(binary)
-
-        return denoised
-
-    def merge_overlapping_boxes(self, boxes: List[Dict]) -> List[Dict]:
-        """Merge overlapping text boxes."""
-        if not boxes:
+    def search_text(self, query: str, text_blocks: List[Dict]) -> List[Dict]:
+        """Search for text in the detected text blocks."""
+        if not query or not text_blocks:
             return []
-
-        def boxes_overlap(box1, box2, threshold=0.3):
-            # Calculate intersection
-            x1 = max(box1['bbox']['x_min'], box2['bbox']['x_min'])
-            y1 = max(box1['bbox']['y_min'], box2['bbox']['y_min'])
-            x2 = min(box1['bbox']['x_max'], box2['bbox']['x_max'])
-            y2 = min(box1['bbox']['y_max'], box2['bbox']['y_max'])
-
-            if x2 < x1 or y2 < y1:
-                return False
-
-            intersection = (x2 - x1) * (y2 - y1)
-            area1 = (box1['bbox']['x_max'] - box1['bbox']['x_min']) * (box1['bbox']['y_max'] - box1['bbox']['y_min'])
-            area2 = (box2['bbox']['x_max'] - box2['bbox']['x_min']) * (box2['bbox']['y_max'] - box2['bbox']['y_min'])
-            
-            overlap = intersection / min(area1, area2)
-            return overlap > threshold
-
-        merged = []
-        while boxes:
-            current = boxes.pop(0)
-            to_merge = []
-
-            i = 0
-            while i < len(boxes):
-                if boxes_overlap(current, boxes[i]):
-                    to_merge.append(boxes.pop(i))
-                else:
-                    i += 1
-
-            if to_merge:
-                # Merge boxes
-                x_min = min([current['bbox']['x_min']] + [b['bbox']['x_min'] for b in to_merge])
-                y_min = min([current['bbox']['y_min']] + [b['bbox']['y_min'] for b in to_merge])
-                x_max = max([current['bbox']['x_max']] + [b['bbox']['x_max'] for b in to_merge])
-                y_max = max([current['bbox']['y_max']] + [b['bbox']['y_max'] for b in to_merge])
-
-                # Combine text and average confidence
-                all_texts = [current['text']] + [b['text'] for b in to_merge]
-                all_confidences = [current['confidence']] + [b['confidence'] for b in to_merge]
+        
+        matches = []
+        query = self.sanitize_text(query).lower()
+        
+        for block in text_blocks:
+            if not block.get('text'):
+                continue
                 
-                merged.append({
-                    "id": current['id'],
-                    "text": " ".join(all_texts),
-                    "confidence": sum(all_confidences) / len(all_confidences),
-                    "bbox": {
-                        "x_min": x_min,
-                        "y_min": y_min,
-                        "x_max": x_max,
-                        "y_max": y_max
-                    },
-                    "points": [
-                        [x_min, y_min],
-                        [x_max, y_min],
-                        [x_max, y_max],
-                        [x_min, y_max]
-                    ]
+            text = self.sanitize_text(block['text']).lower()
+            if query in text:
+                matches.append({
+                    'text': self.sanitize_text(block['text']),
+                    'confidence': float(block.get('confidence', 0.0)),
+                    'bbox': {
+                        'x_min': int(block['bbox'].get('x_min', 0)),
+                        'y_min': int(block['bbox'].get('y_min', 0)),
+                        'x_max': int(block['bbox'].get('x_max', 0)),
+                        'y_max': int(block['bbox'].get('y_max', 0))
+                    } if block.get('bbox') else None
                 })
-            else:
-                merged.append(current)
+        
+        return matches
 
-        return merged
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        # Configure Tesseract parameters for better accuracy
+        self.custom_config = r'--oem 3 --psm 11'
+        self.initialized = True
+        
+    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+        """
+        Preprocess image to improve OCR accuracy:
+        1. Convert to grayscale
+        2. Remove noise
+        3. Thresholding to get black and white image
+        """
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # Remove noise
+        denoised = cv2.fastNlMeansDenoising(gray)
+        
+        # Thresholding
+        _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        return binary
 
-    def detect_text(self, image: np.ndarray) -> Dict[str, Any]:
-        """Detect and recognize text in an image."""
-        if not self.initialized:
-            return {
-                "text_detected": False,
-                "text_blocks": [],
-                "total_confidence": 0.0
-            }
-
+    def detect_text(self, image_path: str) -> Dict:
+        """
+        Detects text in images using Tesseract OCR.
+        Returns detailed text blocks with confidence scores and bounding boxes.
+        """
         try:
+            # Read image using OpenCV
+            image = cv2.imread(str(image_path))
+            if image is None:
+                raise ValueError(f"Could not read image at {image_path}")
+            
             # Preprocess the image
             processed_image = self.preprocess_image(image)
             
-            # Convert numpy array to PIL Image
-            pil_image = Image.fromarray(processed_image)
-
-            # Get detailed OCR data with improved parameters
-            try:
-                ocr_data = pytesseract.image_to_data(
-                    pil_image, 
-                    output_type=pytesseract.Output.DICT,
-                    config='--psm 11 --oem 3'  # Sparse text with OSD, LSTM only
-                )
-            except Exception as e:
-                logger.error(f"OCR processing error: {str(e)}")
-                return {
-                    "text_detected": False,
-                    "text_blocks": [],
-                    "total_confidence": 0.0
-                }
+            # Get detailed OCR data including bounding boxes
+            ocr_data = pytesseract.image_to_data(processed_image, config=self.custom_config, output_type=pytesseract.Output.DICT)
             
             text_blocks = []
-            valid_blocks = 0
-
-            # Process each detected text element
-            for idx in range(len(ocr_data.get('text', []))):
-                try:
-                    text = str(ocr_data['text'][idx]).strip()
-                    if not text:
-                        continue
-
-                    confidence = float(ocr_data.get('conf', [0])[idx])
-                    if confidence <= 0:
-                        continue
-                    
-                    confidence = confidence / 100.0
-                    if confidence < 0.4:  # Increased confidence threshold
-                        continue
-
-                    # Get bounding box coordinates with padding
-                    padding = 5
-                    x = max(0, int(ocr_data.get('left', [0])[idx]) - padding)
-                    y = max(0, int(ocr_data.get('top', [0])[idx]) - padding)
-                    w = int(ocr_data.get('width', [0])[idx]) + (2 * padding)
-                    h = int(ocr_data.get('height', [0])[idx]) + (2 * padding)
-
-                    # Create text block
-                    text_blocks.append({
-                        "id": valid_blocks,
-                        "text": text,
-                        "confidence": confidence,
-                        "bbox": {
-                            "x_min": x,
-                            "y_min": y,
-                            "x_max": x + w,
-                            "y_max": y + h
-                        },
-                        "points": [
-                            [x, y],
-                            [x + w, y],
-                            [x + w, y + h],
-                            [x, y + h]
-                        ]
-                    })
-                    valid_blocks += 1
-                except (KeyError, IndexError, ValueError) as e:
-                    logger.warning(f"Error processing text block {idx}: {str(e)}")
+            height, width = processed_image.shape
+            
+            # Process each detected text block
+            for i in range(len(ocr_data['text'])):
+                # Skip empty text
+                if not ocr_data['text'][i].strip():
                     continue
-
-            # Merge overlapping boxes
-            if text_blocks:
-                text_blocks = self.merge_overlapping_boxes(text_blocks)
-
-            # Calculate average confidence
-            total_confidence = sum(block['confidence'] for block in text_blocks)
-            avg_confidence = total_confidence / len(text_blocks) if text_blocks else 0.0
+                
+                # Calculate confidence
+                conf = float(ocr_data['conf'][i])
+                if conf == -1:  # Skip entries with invalid confidence
+                    continue
+                
+                # Get bounding box coordinates
+                x = ocr_data['left'][i]
+                y = ocr_data['top'][i]
+                w = ocr_data['width'][i]
+                h = ocr_data['height'][i]
+                
+                # Create text block entry
+                text_block = {
+                    'id': i,
+                    'text': ocr_data['text'][i],
+                    'confidence': conf / 100.0,  # Convert to 0-1 range
+                    'bbox': {
+                        'x_min': x,
+                        'y_min': y,
+                        'x_max': x + w,
+                        'y_max': y + h
+                    },
+                    'points': [
+                        [x, y],           # Top-left
+                        [x + w, y],       # Top-right
+                        [x + w, y + h],   # Bottom-right
+                        [x, y + h]        # Bottom-left
+                    ],
+                    'block_num': ocr_data['block_num'][i],
+                    'line_num': ocr_data['line_num'][i],
+                    'word_num': ocr_data['word_num'][i]
+                }
+                
+                text_blocks.append(text_block)
+            
+            # Group text blocks by lines for better organization
+            organized_blocks = self._organize_text_blocks(text_blocks)
+            
+            # Get text summary
+            text_summary = self._get_text_summary(text_blocks)
+            
+            # Categorize text content
+            categories = self._categorize_text(text_blocks)
             
             return {
-                "text_detected": len(text_blocks) > 0,
-                "text_blocks": text_blocks,
-                "total_confidence": float(avg_confidence)
+                'text_detected': len(text_blocks) > 0,
+                'text_blocks': organized_blocks,
+                'total_confidence': np.mean([block['confidence'] for block in text_blocks]) if text_blocks else 0.0,
+                'categories': categories,
+                'raw_text': ' '.join([block['text'] for block in text_blocks])
             }
 
         except Exception as e:
-            logger.error(f"Error in text detection: {str(e)}")
+            self.logger.error(f"Error in text detection: {str(e)}")
             return {
-                "text_detected": False,
-                "text_blocks": [],
-                "total_confidence": 0.0
+                'text_detected': False,
+                'text_blocks': [],
+                'total_confidence': 0.0,
+                'categories': [],
+                'raw_text': ''
             }
+
+    def _get_text_summary(self, text_blocks: List[Dict]) -> Dict:
+        """Generate a summary of the detected text."""
+        if not text_blocks:
+            return {
+                'total_words': 0,
+                'avg_confidence': 0.0,
+                'text_length': 0
+            }
+        
+        total_words = len(text_blocks)
+        avg_confidence = np.mean([block['confidence'] for block in text_blocks])
+        text_length = sum(len(block['text']) for block in text_blocks)
+        
+        return {
+            'total_words': total_words,
+            'avg_confidence': avg_confidence,
+            'text_length': text_length
+        }
+
+    def _organize_text_blocks(self, text_blocks: List[Dict]) -> List[Dict]:
+        """
+        Organize text blocks by lines and paragraphs.
+        """
+        # Sort blocks by block number, line number, and word number
+        sorted_blocks = sorted(
+            text_blocks,
+            key=lambda x: (x['block_num'], x['line_num'], x['word_num'])
+        )
+        
+        # Group blocks by lines
+        current_line = []
+        organized_blocks = []
+        current_line_num = None
+        
+        for block in sorted_blocks:
+            if current_line_num is None:
+                current_line_num = block['line_num']
+                
+            if block['line_num'] != current_line_num:
+                # New line detected, process the current line
+                if current_line:
+                    line_text = ' '.join([b['text'] for b in current_line])
+                    organized_blocks.append({
+                        'type': 'line',
+                        'text': line_text,
+                        'confidence': np.mean([b['confidence'] for b in current_line]),
+                        'words': current_line
+                    })
+                current_line = []
+                current_line_num = block['line_num']
+            
+            current_line.append(block)
+        
+        # Process the last line
+        if current_line:
+            line_text = ' '.join([b['text'] for b in current_line])
+            organized_blocks.append({
+                'type': 'line',
+                'text': line_text,
+                'confidence': np.mean([b['confidence'] for b in current_line]),
+                'words': current_line
+            })
+        
+        return organized_blocks
+
+    def _categorize_text(self, text_blocks: List[Dict]) -> List[str]:
+        """
+        Categorize text content based on patterns and keywords.
+        """
+        all_text = ' '.join([block['text'].lower() for block in text_blocks])
+        categories = []
+        
+        # Receipt detection
+        receipt_keywords = ['total', 'subtotal', 'tax', 'amount', 'payment', '$', '£', '€']
+        if any(keyword in all_text for keyword in receipt_keywords):
+            categories.append('receipt')
+        
+        # Document detection
+        document_keywords = ['page', 'chapter', 'section', 'dear', 'sincerely']
+        if any(keyword in all_text for keyword in document_keywords):
+            categories.append('document')
+        
+        # Sign detection
+        sign_keywords = ['stop', 'exit', 'entrance', 'warning', 'caution']
+        if any(keyword in all_text for keyword in sign_keywords):
+            categories.append('sign')
+        
+        # Contact information detection
+        contact_patterns = ['@', '.com', '.org', '.net', 'tel:', 'phone:', 'email:']
+        if any(pattern in all_text for pattern in contact_patterns):
+            categories.append('contact_info')
+        
+        return categories
+
+    def search_text(self, query: str, text_blocks: List[Dict], threshold: float = 0.6) -> List[Dict]:
+        """
+        Search for text in the detected text blocks.
+        Uses basic string matching with case-insensitive comparison.
+        """
+        matches = []
+        query = query.lower()
+        
+        for block in text_blocks:
+            if isinstance(block, dict) and 'text' in block:
+                text = block['text'].lower()
+                if query in text:
+                    similarity = len(query) / len(text) if len(text) > 0 else 0
+                    if similarity >= threshold:
+                        matches.append({
+                            **block,
+                            'similarity_score': similarity
+                        })
+        
+        return sorted(matches, key=lambda x: x['similarity_score'], reverse=True)

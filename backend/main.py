@@ -104,22 +104,72 @@ def extract_metadata(image_path: Path) -> dict:
 class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
-            return obj.tolist()
+            return [self.default(x) for x in obj.tolist()]
         if isinstance(obj, np.integer):
             return int(obj)
         if isinstance(obj, np.floating):
+            if not np.isfinite(obj):
+                return 0.0
             return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
         return super().default(obj)
 
+# Initialize analyzer
+analyzer = ImageAnalyzer()
+
 app = FastAPI()
+
+# Configure static file serving
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
+import mimetypes
+
+# Ensure directories exist
+import os
+os.makedirs("images/faces", exist_ok=True)
+
+# Configure static file serving
+@app.get("/images/{image_path:path}")
+async def serve_image(image_path: str):
+    """Serve images with proper headers and MIME types."""
+    try:
+        image_full_path = Path("images") / image_path
+        if not image_full_path.exists():
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Image not found: {image_path}"}
+            )
+
+        # Determine MIME type
+        mime_type, _ = mimetypes.guess_type(str(image_full_path))
+        if not mime_type:
+            mime_type = 'application/octet-stream'
+
+        return FileResponse(
+            path=image_full_path,
+            media_type=mime_type,
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Access-Control-Allow-Origin": "*"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error serving image {image_path}: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to serve image: {str(e)}"}
+        )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Initialize analyzer
@@ -129,8 +179,42 @@ analyzer = ImageAnalyzer()
 IMAGES_DIR = Path("./images")
 IMAGES_DIR.mkdir(exist_ok=True)
 
-# Mount the images directory
-app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
+from starlette.responses import FileResponse
+from starlette.background import BackgroundTask
+import mimetypes
+
+# Configure common image mime types
+mimetypes.init()
+mimetypes.add_type('image/jpeg', '.jpeg')
+mimetypes.add_type('image/jpeg', '.jpg')
+mimetypes.add_type('image/png', '.png')
+
+@app.get("/images/{image_name}")
+async def get_image(image_name: str):
+    """Serve images with proper headers and caching."""
+    image_path = IMAGES_DIR / image_name
+    
+    if not image_path.exists():
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Image {image_name} not found"}
+        )
+    
+    # Get mime type
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if not mime_type:
+        mime_type = 'application/octet-stream'
+    
+    # Use FileResponse for efficient file handling
+    return FileResponse(
+        path=image_path,
+        media_type=mime_type,
+        filename=image_name,
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Accept-Ranges": "bytes"
+        }
+    )
 
 async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
     """Stream analysis results as they're processed."""
@@ -166,12 +250,10 @@ async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
                         None, analyzer.scene_classifier.predict_scene, image
                     )
                     
-                    # Skip text recognition temporarily
-                    text_results = {
-                        "text_detected": False,
-                        "text_blocks": [],
-                        "total_confidence": 0.0
-                    }
+                    # Perform text recognition
+                    text_results = await asyncio.get_event_loop().run_in_executor(
+                        None, analyzer.text_recognizer.detect_text, str(image_path)
+                    )
                     
                     metadata = await asyncio.get_event_loop().run_in_executor(
                         None, extract_metadata, image_path
@@ -309,6 +391,285 @@ async def health_check():
                 "error": str(e)
             }
         )
+
+from pydantic import BaseModel
+
+class SearchQuery(BaseModel):
+    query: str
+
+@app.post("/search-text")
+async def search_text(search_query: SearchQuery):
+    """Search for text in analyzed images."""
+    try:
+        logger.info(f"Received search query: {search_query.query}")
+        # Get all image files
+        images_dir = Path("images")
+        if not images_dir.exists():
+            logger.error("Images directory not found")
+            return JSONResponse({
+                "success": False,
+                "error": "Images directory not found"
+            })
+            
+        image_files = []
+        for ext in [".jpg", ".jpeg", ".png"]:
+            image_files.extend(images_dir.glob(f"*{ext}"))
+        
+        logger.info(f"Found {len(image_files)} images to search")
+        results = []
+        
+        for image_file in image_files:
+            try:
+                logger.debug(f"Processing image: {image_file.name}")
+                # Load cached analysis if available
+                cache_file = Path(f"cache/{image_file.stem}_text.json")
+                analysis = None
+                
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, 'r') as f:
+                            analysis = json.load(f)
+                    except Exception as e:
+                        logger.warning(f"Failed to load cache for {image_file.name}: {e}")
+                
+                if not analysis:
+                    # Analyze image synchronously since text recognition is CPU-bound
+                    analysis = {
+                        "filename": image_file.name,
+                        "text_recognition": analyzer.text_recognizer.detect_text(str(image_file))
+                    }
+                    
+                    # Cache the results
+                    try:
+                        cache_file.parent.mkdir(exist_ok=True)
+                        with open(cache_file, 'w') as f:
+                            json.dump(analysis, f)
+                    except Exception as e:
+                        logger.warning(f"Failed to cache analysis for {image_file.name}: {e}")
+                
+                if analysis["text_recognition"]["text_detected"]:
+                    logger.debug(f"Text detected in {image_file.name}, searching...")
+                    matches = analyzer.text_recognizer.search_text(
+                        search_query.query,
+                        analysis["text_recognition"]["text_blocks"]
+                    )
+                    if matches:
+                        logger.info(f"Found {len(matches)} matches in {image_file.name}")
+                        results.append({
+                            "filename": image_file.name,
+                            "matches": matches
+                        })
+            except Exception as e:
+                logger.error(f"Error analyzing {image_file.name}: {str(e)}")
+                continue
+        
+        logger.info(f"Converting {len(results)} results to JSON format")
+        # Convert results to JSON-serializable format
+        serializable_results = []
+        for result in results:
+            try:
+                matches = []
+                for match in result['matches']:
+                    try:
+                        # Ensure bbox values are valid
+                        bbox = None
+                        if match.get('bbox'):
+                            bbox_data = match['bbox']
+                            try:
+                                bbox = {
+                                    'x_min': max(0.0, min(1.0, float(bbox_data['x_min']))),
+                                    'y_min': max(0.0, min(1.0, float(bbox_data['y_min']))),
+                                    'x_max': max(0.0, min(1.0, float(bbox_data['x_max']))),
+                                    'y_max': max(0.0, min(1.0, float(bbox_data['y_max'])))
+                                }
+                                # Validate bbox coordinates
+                                if not (bbox['x_min'] < bbox['x_max'] and bbox['y_min'] < bbox['y_max']):
+                                    logger.warning(f"Invalid bbox coordinates in {result['filename']}: {bbox}")
+                                    bbox = None
+                            except (KeyError, ValueError, TypeError) as e:
+                                logger.warning(f"Invalid bbox data in {result['filename']}: {e}")
+                                bbox = None
+                        
+                        serialized_match = {
+                            'text': str(match['text']).strip(),
+                            'confidence': float(match.get('confidence', 0)),
+                            'bbox': bbox
+                        }
+                        matches.append(serialized_match)
+                        logger.debug(f"Serialized match in {result['filename']}: {serialized_match}")
+                    except Exception as e:
+                        logger.error(f"Error serializing match in {result['filename']}: {str(e)}")
+                        continue
+                
+                if matches:  # Only add results with valid matches
+                    serializable_results.append({
+                        'filename': str(result['filename']),
+                        'matches': matches
+                    })
+                    logger.debug(f"Added result for {result['filename']} with {len(matches)} matches")
+            except Exception as e:
+                logger.error(f"Error serializing result for {result['filename']}: {str(e)}")
+                continue
+
+        from json import JSONEncoder
+        class CustomJSONEncoder(JSONEncoder):
+            def default(self, obj):
+                try:
+                    return super().default(obj)
+                except TypeError:
+                    return str(obj)
+
+        def sanitize_dict(d):
+            if not isinstance(d, dict):
+                return d
+            return {str(k): sanitize_dict(v) if isinstance(v, (dict, list)) else str(v) if not isinstance(v, (int, float, bool, type(None))) else v
+                    for k, v in d.items()}
+
+        def sanitize_list(lst):
+            return [sanitize_dict(item) if isinstance(item, dict) else item for item in lst]
+
+        # Process and sanitize results
+        processed_results = []
+        for result in serializable_results:
+            try:
+                processed_matches = []
+                for match in result.get('matches', []):
+                    try:
+                        # Ensure all values are properly typed
+                        bbox = None
+                        if match.get('bbox'):
+                            try:
+                                bbox = {
+                                    'x_min': int(float(match['bbox'].get('x_min', 0))),
+                                    'y_min': int(float(match['bbox'].get('y_min', 0))),
+                                    'x_max': int(float(match['bbox'].get('x_max', 0))),
+                                    'y_max': int(float(match['bbox'].get('y_max', 0)))
+                                }
+                            except (ValueError, TypeError, KeyError) as e:
+                                logger.warning(f'Invalid bbox data: {e}')
+                                continue
+
+                        processed_match = {
+                            'text': str(match.get('text', '')).strip(),
+                            'confidence': float(match.get('confidence', 0.0)),
+                            'bbox': bbox
+                        }
+                        processed_matches.append(processed_match)
+                    except Exception as e:
+                        logger.warning(f'Error processing match: {e}')
+                        continue
+
+                if processed_matches:  # Only add results with valid matches
+                    processed_results.append({
+                        'filename': str(result.get('filename', '')),
+                        'matches': processed_matches
+                    })
+            except Exception as e:
+                logger.warning(f'Error processing result: {e}')
+                continue
+
+        # Final sanitization of the entire response
+        response_data = {
+            'success': True,
+            'results': sanitize_list(processed_results)
+        }
+        
+        # Use FastAPI's JSONResponse with explicit serialization
+        # Validate and encode response
+        try:
+            # Use custom encoder for the first pass to catch any serialization issues
+            json_str = json.dumps(response_data, cls=CustomJSONEncoder, ensure_ascii=True)
+            
+            # Verify the JSON is valid by parsing it
+            parsed_data = json.loads(json_str)
+            
+            # Send the parsed (and validated) data
+            return JSONResponse(
+                content=parsed_data,  # Use parsed data to ensure it's valid JSON
+                headers={
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cache-Control': 'no-cache'
+                }
+            )
+        except Exception as json_error:
+            error_msg = str(json_error)
+            logger.error(f'JSON serialization error: {error_msg}')
+            
+            # Create a safe error response
+            safe_error = {
+                'success': False,
+                'error': 'Failed to process response',
+                'details': error_msg[:200]  # Limit error message length
+            }
+            
+            return JSONResponse(
+                content=safe_error,
+                status_code=500,
+                headers={
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cache-Control': 'no-cache'
+                }
+            )
+    except Exception as e:
+        logger.error(f"Error in text search: {str(e)}")
+        error_message = str(e)
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': error_message,
+                'details': {
+                    'type': type(e).__name__,
+                    'message': error_message
+                }
+            },
+            status_code=500,
+            headers={
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        )
+
+@app.get("/analyze_face/{image_name}")
+async def analyze_face(image_name: str):
+    """Analyze facial attributes in an image."""
+    try:
+        image_path = Path("images") / image_name
+        if not image_path.exists():
+            return JSONResponse({"error": "Image not found"}, status_code=404)
+            
+        # Read image
+        image = cv2.imread(str(image_path))
+        if image is None:
+            return JSONResponse({"error": "Could not read image"}, status_code=400)
+            
+        # Get face detections with attributes
+        results = analyzer.face_detector.detect_faces(image, image_name, analyze_attributes=True)
+        if "error" in results:
+            return JSONResponse(content=results, status_code=400)
+
+        return JSONResponse(content=results, encoder=NumpyJSONEncoder)
+        cache_dir = Path("cache")
+        cache_dir.mkdir(exist_ok=True)
+        
+        # Save visualization temporarily
+        vis_path = cache_dir / f"vis_{image_name}"
+        cv2.imwrite(str(vis_path), vis_image)
+        
+        # Return results with proper JSON encoding
+        return JSONResponse(
+            content={
+                "results": results,
+                "visualization": f"vis_{image_name}"
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error analyzing face: {str(e)}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn

@@ -2,20 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply bg-[#050505] text-white/90;
+  }
+}
+
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Glass morphism effects */
+.glass-panel {
+  @apply bg-black/20 backdrop-blur-md border border-white/[0.02] hover:border-white/[0.08] transition-all duration-500;
+}
+
+.glass-panel-hover {
+  @apply hover:shadow-lg hover:shadow-black/40;
+}
+
+/* Smooth transitions */
+.smooth-transition {
+  @apply transition-all duration-500;
+}
+
+/* Button styles */
+.btn-glass {
+  @apply px-4 py-2 rounded-xl bg-black/20 hover:bg-black/40 backdrop-blur-md 
+         border border-white/[0.05] hover:border-white/[0.1] 
+         transition-all duration-300 hover:scale-105;
+}
+
+/* Tab styles */
+.tab-button {
+  @apply px-4 py-3 rounded-xl text-sm font-medium 
+         bg-black/20 hover:bg-black/30 backdrop-blur-sm 
+         border border-white/[0.02] hover:border-white/[0.08] 
+         transition-all duration-300;
+}
+
+.tab-button-active {
+  @apply bg-white/10 border-white/10;
+}
+
+/* Card styles */
+.card-glass {
+  @apply bg-black/20 backdrop-blur-md rounded-2xl 
+         border border-white/[0.02] hover:border-white/[0.08] 
+         transition-all duration-500 hover:shadow-lg hover:shadow-black/40;
 }

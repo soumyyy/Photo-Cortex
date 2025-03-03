@@ -2,20 +2,35 @@ from .face_detector import FaceDetector
 from .object_detector import ObjectDetector
 from .scene_classifier import SceneClassifier
 from .text_recognizer import TextRecognizer
+from .image_analyzer import ImageAnalyzer
 import numpy as np
 from typing import Dict, Any, Optional, Union
 from pathlib import Path
 import logging
 import cv2
 
+__all__ = ['ImageAnalyzer', 'TextRecognizer']
+
 logger = logging.getLogger(__name__)
 
 class ImageAnalyzer:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ImageAnalyzer, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
+        if self._initialized:
+            return
+            
         self.face_detector = FaceDetector()
         self.object_detector = ObjectDetector()
         self.scene_classifier = SceneClassifier()
         self.text_recognizer = TextRecognizer()
+        self._initialized = True
         logger.info("All models initialized successfully")
 
     def analyze_image(self, image: Union[np.ndarray, str, Path]) -> Dict[str, Any]:

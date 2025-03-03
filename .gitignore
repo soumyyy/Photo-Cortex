@@ -41,8 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Backend
 backend/__pycache__
 backend/.venv
-backend/images
+backend/image/**
+backend/images/**
 backend/models/weights
 backend/models/inference/__pycache__

@@ -5,7 +5,7 @@ import { Tab } from '@headlessui/react';
 import ImageGrid from '@/app/components/ImageGrid';
 import PeopleGrid from '@/app/components/PeopleGrid';
 import ImageMap from '@/app/components/ImageMap';
-import { PhotoIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, UserGroupIcon, MapIcon } from '@heroicons/react/24/outline';
 
 interface TextBlock {
   id: number;
@@ -24,6 +24,7 @@ interface ImageAnalysis {
   filename: string;
   faces: Array<{
     confidence: number;
+    score: number;
     bbox: number[];
     face_image?: string;
   }>;
@@ -133,83 +134,103 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-white">Image Analysis</h1>
+    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
+      <div className="max-w-screen-2xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 space-y-4 sm:space-y-0">
+          <div>
+            <h1 className="text-3xl font-semibold text-white/90 mb-2">PhotoCortex</h1>
+            <p className="text-sm text-white/60">AI-Powered Image Analysis</p>
+          </div>
           {loading && (
-            <div className="text-sm text-gray-400">
-              Analyzing {processedCount} of {totalImages} images ({Math.round(progress)}%)
+            <div className="glass-panel px-4 py-2 rounded-xl text-sm text-white/70">
+              Processing {processedCount} of {totalImages} images ({Math.round(progress)}%)
             </div>
           )}
         </div>
 
         {/* Progress Bar */}
         {loading && (
-          <div className="h-1 w-full bg-gray-800 rounded-full mb-8 overflow-hidden">
+          <div className="glass-panel p-1 rounded-full mb-12 overflow-hidden">
             <div 
-              className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+              className="h-1 bg-white/20 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
               style={{ width: `${progress}%` }}
-            />
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/20 to-white/30 animate-shimmer" />
+            </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+          <div className="mb-8 p-4 glass-panel rounded-xl border-red-500/20 text-red-400/90">
             {error}
           </div>
         )}
 
         <Tab.Group>
-          <Tab.List className="flex space-x-1 mb-6">
-            <Tab className={({ selected }) =>
-              `flex items-center px-4 py-2.5 text-sm rounded-lg transition-all outline-none
-              ${selected 
-                ? 'text-white bg-gray-800 shadow-lg' 
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`
-            }>
-              <PhotoIcon className="w-5 h-5 mr-2" />
-              All Images
+          <Tab.List className="flex space-x-4 mb-12 px-1">
+            <Tab
+              className={({ selected }) =>
+                `flex items-center space-x-3 tab-button ${
+                  selected ? 'tab-button-active' : ''
+                }`
+              }
+            >
+              <PhotoIcon className="w-5 h-5" />
+              <span>All Images</span>
             </Tab>
-            <Tab className={({ selected }) =>
-              `flex items-center px-4 py-2.5 text-sm rounded-lg transition-all outline-none
-              ${selected 
-                ? 'text-white bg-gray-800 shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`
-            }>
-              <UserGroupIcon className="w-5 h-5 mr-2" />
-              People
+            <Tab
+              className={({ selected }) =>
+                `flex items-center space-x-3 tab-button ${
+                  selected ? 'tab-button-active' : ''
+                }`
+              }
+            >
+              <UserGroupIcon className="w-5 h-5" />
+              <span>People</span>
             </Tab>
-            <Tab className={({ selected }) =>
-              `flex items-center px-4 py-2.5 text-sm rounded-lg transition-all outline-none
-              ${selected 
-                ? 'text-white bg-gray-800 shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}`
-            }>
-              Map View
+            <Tab
+              className={({ selected }) =>
+                `flex items-center space-x-3 tab-button ${
+                  selected ? 'tab-button-active' : ''
+                }`
+              }
+            >
+              <MapIcon className="w-5 h-5" />
+              <span>Map View</span>
             </Tab>
           </Tab.List>
 
-          <Tab.Panels>
-            <Tab.Panel>
-              {loading && images.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <span className="ml-3 text-gray-400">Starting analysis...</span>
-                </div>
-              ) : images.length > 0 ? (
-                <ImageGrid images={images} />
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  No images found in the backend folder
-                </div>
-              )}
+          <Tab.Panels className="focus:outline-none">
+            <Tab.Panel className="focus:outline-none">
+              <div className="animate-fadeIn">
+                {loading && images.length === 0 ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full border-2 border-white/10 animate-ping absolute inset-0" />
+                      <div className="w-12 h-12 rounded-full border-2 border-t-white/40 animate-spin" />
+                    </div>
+                    <span className="ml-4 text-white/60">Starting analysis...</span>
+                  </div>
+                ) : images.length > 0 ? (
+                  <div className="w-full">
+                    <ImageGrid images={images} />
+                  </div>
+                ) : (
+                  <div className="text-center py-16 text-white/40">
+                    No images found in the backend folder
+                  </div>
+                )}
+              </div>
             </Tab.Panel>
-            <Tab.Panel>
-              <PeopleGrid />
+            <Tab.Panel className="focus:outline-none">
+              <div className="animate-fadeIn">
+                <PeopleGrid />
+              </div>
             </Tab.Panel>
-            <Tab.Panel>
-              <ImageMap images={images} />
+            <Tab.Panel className="focus:outline-none">
+              <div className="animate-fadeIn">
+                <ImageMap images={images} />
+              </div>
             </Tab.Panel>
           </Tab.Panels>
         </Tab.Group>
