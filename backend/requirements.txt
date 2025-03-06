@@ -13,3 +13,4 @@ insightface==0.7.3
 pytesseract==0.3.10
 ultralytics==8.0.227
 aiofiles
+langdetect==1.0.9

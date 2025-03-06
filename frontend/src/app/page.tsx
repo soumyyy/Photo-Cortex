@@ -6,6 +6,12 @@ import ImageGrid from '@/app/components/ImageGrid';
 import PeopleGrid from '@/app/components/PeopleGrid';
 import ImageMap from '@/app/components/ImageMap';
 import { PhotoIcon, UserGroupIcon, MapIcon } from '@heroicons/react/24/outline';
+import { ImageAnalysis } from './types/ImageAnalysis';
+
+interface TabItem {
+  name: string;
+  icon: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>;
+}
 
 interface TextBlock {
   id: number;
@@ -20,41 +26,11 @@ interface TextBlock {
   points: number[][];
 }
 
-interface ImageAnalysis {
-  filename: string;
-  faces: Array<{
-    confidence: number;
-    score: number;
-    bbox: number[];
-    face_image?: string;
-  }>;
-  objects: string[];
-  scene_classification: {
-    scene_type: string;
-    confidence: number;
-  };
-  text_recognition: {
-    text_detected: boolean;
-    text_blocks: TextBlock[];
-    total_confidence: number;
-  };
-  metadata: {
-    date_taken: string | null;
-    camera_make: string | null;
-    camera_model: string | null;
-    focal_length: string | null;
-    exposure_time: string | null;
-    f_number: string | null;
-    iso: string | null;
-    dimensions: string;
-    format: string;
-    file_size: string;
-    gps: {
-      latitude: number;
-      longitude: number;
-    } | null;
-  };
-}
+const tabs: TabItem[] = [
+  { name: 'Photos', icon: PhotoIcon },
+  { name: 'People', icon: UserGroupIcon },
+  { name: 'Map', icon: MapIcon },
+];
 
 export default function Home() {
   const [images, setImages] = useState<ImageAnalysis[]>([]);
@@ -82,51 +58,69 @@ export default function Home() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
       
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value);
-        const updates = chunk.split('\n').filter(Boolean);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
         
-        for (const update of updates) {
-          const data = JSON.parse(update);
+        // Keep the last line in the buffer if it's incomplete
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
           
-          if (data.error) {
-            setError(data.error);
-            break;
-          }
-          
-          if (data.complete) {
-            setImages(data.results.map((result: any) => ({
-              ...result,
-              text_recognition: result.text_recognition || {
-                text_detected: false,
-                text_blocks: [],
-                total_confidence: 0
-              }
-            })));
-            setProgress(100);
-            break;
-          } else {
-            setProgress(data.progress);
-            setProcessedCount(data.current);
-            setTotalImages(data.total);
+          try {
+            const data = JSON.parse(line);
             
-            // Handle single image result
-            if (data.latest_result) {
-              setImages(prev => {
-                if (prev.find(img => img.filename === data.latest_result.filename)) {
-                  return prev;
-                }
-                return [...prev, data.latest_result];
-              });
+            if (data.error) {
+              setError(data.error);
+              break;
             }
+            
+            if (data.complete) {
+              console.log('Received complete data:', data.results);
+              const processedResults = data.results.map((result: any) => {
+                console.log('Processing result:', result.filename, 'GPS:', result.metadata?.gps);
+                return {
+                  ...result,
+                  text_recognition: result.text_recognition || {
+                    text_detected: false,
+                    text_blocks: [],
+                    total_confidence: 0
+                  }
+                };
+              });
+              setImages(processedResults);
+              setProgress(100);
+              break;
+            } else {
+              setProgress(data.progress);
+              setProcessedCount(data.current);
+              setTotalImages(data.total);
+              
+              // Handle single image result
+              if (data.latest_result) {
+                console.log('Received latest result:', data.latest_result.filename, 'GPS:', data.latest_result.metadata?.gps);
+                setImages(prev => {
+                  if (prev.find(img => img.filename === data.latest_result.filename)) {
+                    return prev;
+                  }
+                  return [...prev, data.latest_result];
+                });
+              }
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse line:', line);
+            continue;
           }
         }
       }
     } catch (err) {
+      console.error('Error analyzing images:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze images');
     } finally {
       setLoading(false);
@@ -168,36 +162,19 @@ export default function Home() {
 
         <Tab.Group>
           <Tab.List className="flex space-x-4 mb-12 px-1">
-            <Tab
-              className={({ selected }) =>
-                `flex items-center space-x-3 tab-button ${
-                  selected ? 'tab-button-active' : ''
-                }`
-              }
-            >
-              <PhotoIcon className="w-5 h-5" />
-              <span>All Images</span>
-            </Tab>
-            <Tab
-              className={({ selected }) =>
-                `flex items-center space-x-3 tab-button ${
-                  selected ? 'tab-button-active' : ''
-                }`
-              }
-            >
-              <UserGroupIcon className="w-5 h-5" />
-              <span>People</span>
-            </Tab>
-            <Tab
-              className={({ selected }) =>
-                `flex items-center space-x-3 tab-button ${
-                  selected ? 'tab-button-active' : ''
-                }`
-              }
-            >
-              <MapIcon className="w-5 h-5" />
-              <span>Map View</span>
-            </Tab>
+            {tabs.map((tab, index) => (
+              <Tab
+                key={index}
+                className={({ selected }) =>
+                  `flex items-center space-x-3 tab-button ${
+                    selected ? 'tab-button-active' : ''
+                  }`
+                }
+              >
+                <tab.icon className="w-5 h-5" />
+                <span>{tab.name}</span>
+              </Tab>
+            ))}
           </Tab.List>
 
           <Tab.Panels className="focus:outline-none">
@@ -228,8 +205,20 @@ export default function Home() {
               </div>
             </Tab.Panel>
             <Tab.Panel className="focus:outline-none">
-              <div className="animate-fadeIn">
-                <ImageMap images={images} />
+              <div className="animate-fadeIn" style={{ height: 'calc(100vh - 200px)' }}>
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full border-2 border-white/10 animate-ping absolute inset-0" />
+                      <div className="w-12 h-12 rounded-full border-2 border-t-white/40 animate-spin" />
+                    </div>
+                    <span className="ml-4 text-white/60">Loading map...</span>
+                  </div>
+                ) : (
+                  <div className="h-full w-full rounded-lg overflow-hidden">
+                    <ImageMap images={images} />
+                  </div>
+                )}
               </div>
             </Tab.Panel>
           </Tab.Panels>

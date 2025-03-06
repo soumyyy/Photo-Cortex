@@ -1,24 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-// Create a client-side only map component
-const ClientSideMap = dynamic(
-  () => import('./MapClient').then((mod) => mod.default),
-  { ssr: false }
-);
+const MapClient = dynamic(() => import('./MapClient'), { ssr: false });
 
-interface ImageMapProps {
-  images: Array<{
-    filename: string;
-    metadata: {
-      gps: {
-        latitude: number;
-        longitude: number;
-      } | null;
-    };
-  }>;
+interface GPS {
+  latitude: number;
+  longitude: number;
+}
+
+interface ImageMetadata {
+  gps: GPS | null;
+}
+
+interface ImageAnalysis {
+  filename: string;
+  metadata: ImageMetadata;
 }
 
 interface MapBounds {
@@ -26,46 +24,76 @@ interface MapBounds {
   bounds: [[number, number], [number, number]];
 }
 
-const ImageMap = ({ images }: ImageMapProps) => {
-  const [mapConfig, setMapConfig] = useState<MapBounds>({
-    center: [0, 0],
-    bounds: [[0, 0], [0, 0]]
-  });
+interface ImageMapProps {
+  images?: ImageAnalysis[];
+  singleLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+const ImageMap = ({ images, singleLocation }: ImageMapProps) => {
+  const [mapConfig, setMapConfig] = useState<MapBounds | null>(null);
 
   useEffect(() => {
-    const filtered = images.filter(img => img.metadata.gps !== null);
-    if (filtered.length > 0) {
-      // Calculate center
-      const lats = filtered.map(img => img.metadata.gps!.latitude);
-      const lngs = filtered.map(img => img.metadata.gps!.longitude);
+    if (singleLocation) {
+      console.log('ImageMap: Setting up single location:', singleLocation);
+      // Handle single location
+      const newConfig: MapBounds = {
+        center: [singleLocation.latitude, singleLocation.longitude],
+        bounds: [
+          [singleLocation.latitude - 0.001, singleLocation.longitude - 0.001],
+          [singleLocation.latitude + 0.001, singleLocation.longitude + 0.001]
+        ]
+      };
+      setMapConfig(newConfig);
+    } else if (images && images.length > 0) {
+      // Handle multiple locations
+      const withGps = images.filter(img => img.metadata.gps !== null);
+      console.log('ImageMap: Images with GPS:', withGps.length);
       
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      
-      setMapConfig({
-        center: [(minLat + maxLat) / 2, (minLng + maxLng) / 2],
-        bounds: [[minLat, minLng], [maxLat, maxLng]]
-      });
+      if (withGps.length > 0) {
+        const lats = withGps.map(img => img.metadata.gps!.latitude);
+        const lngs = withGps.map(img => img.metadata.gps!.longitude);
+        
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        
+        const centerLat = (minLat + maxLat) / 2;
+        const centerLng = (minLng + maxLng) / 2;
+        
+        const newConfig: MapBounds = {
+          center: [centerLat, centerLng],
+          bounds: [[minLat, minLng], [maxLat, maxLng]]
+        };
+        console.log('ImageMap: Setting map config:', newConfig);
+        setMapConfig(newConfig);
+      }
     }
-  }, [images]);
+  }, [images, singleLocation]);
 
-  if (images.filter(img => img.metadata.gps !== null).length === 0) {
+  // Handle no location data
+  if ((!images || images.length === 0) && !singleLocation) {
     return (
-      <div className="h-96 flex items-center justify-center text-gray-500">
-        No images with GPS data available
+      <div className="flex items-center justify-center h-full text-white/60">
+        No location data available
       </div>
     );
   }
 
   return (
-    <div className="h-[600px] w-full rounded-lg overflow-hidden shadow-lg">
-      <ClientSideMap 
-        images={images} 
-        center={mapConfig.center}
-        bounds={mapConfig.bounds}
-      />
+    <div className="relative h-[800px] w-full rounded-lg overflow-hidden bg-gray-900">
+      {mapConfig && (
+        <div className="absolute inset-0" style={{ zIndex: 1 }}>
+          <MapClient 
+            images={images} 
+            config={mapConfig}
+            singleLocation={singleLocation}
+          />
+        </div>
+      )}
     </div>
   );
 };

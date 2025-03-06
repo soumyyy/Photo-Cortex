@@ -1,3 +1,4 @@
+/* eslint-disable */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,4 +65,75 @@
   @apply bg-black/20 backdrop-blur-md rounded-2xl 
          border border-white/[0.02] hover:border-white/[0.08] 
          transition-all duration-500 hover:shadow-lg hover:shadow-black/40;
+}
+
+/* Map Container Styles */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+}
+
+.leaflet-tile-container {
+  filter: brightness(0.9) contrast(1.1);
+}
+
+.leaflet-control-container .leaflet-control {
+  z-index: 1000;
+}
+
+.leaflet-pane {
+  z-index: 1;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000;
+}
+
+/* Marker Styles */
+.custom-marker {
+  position: relative;
+  width: 24px !important;
+  height: 24px !important;
+  margin-left: -12px !important;
+  margin-top: -12px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.marker-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8),
+              0 0 8px rgba(59, 130, 246, 0.8);
+}
+
+.marker-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 50%;
+  animation: pulse 2s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
 }

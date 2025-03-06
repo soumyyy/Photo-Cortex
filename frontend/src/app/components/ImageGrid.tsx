@@ -1,50 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, CameraIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CameraIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
-
-interface FaceAttributes {
-  age: string;
-  gender: string;
-  smile_intensity: number;
-  eye_status: string;
-  eye_metrics: {
-    left_ear: number;
-    right_ear: number;
-  };
-  landmarks: number[][];
-}
-
-interface Face {
-  bbox: number[];
-  score: number;
-  face_id?: string;
-  face_image?: string;
-  attributes?: FaceAttributes;
-  embedding?: number[];
-}
-
-interface ImageAnalysis {
-  filename: string;
-  faces: Face[];
-  objects: string[];
-  scene_classification: {
-    scene_type: string;
-    confidence: number;
-  };
-  metadata: {
-    date_taken: string | null;
-    camera_make: string | null;
-    camera_model: string | null;
-    focal_length: string | null;
-    exposure_time: string | null;
-    f_number: string | null;
-    iso: string | null;
-    dimensions: string;
-    format: string;
-    file_size: string;
-  };
-}
+import ImageMap from './ImageMap';
+import { ImageAnalysis, Face } from '../types/ImageAnalysis';
 
 interface ImageGridProps {
   images: ImageAnalysis[];
@@ -56,6 +15,7 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [showFaceOverlay, setShowFaceOverlay] = useState(false);
+  const [config, setConfig] = useState<{ API_BASE_URL: string }>({ API_BASE_URL: 'http://localhost:8000' });
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const imageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -98,9 +58,17 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
     };
   }, [images]);
 
+  useEffect(() => {
+    fetch('http://localhost:8000/config')
+      .then(res => res.json())
+      .then(data => setConfig(data))
+      .catch(err => console.error('Failed to fetch config:', err));
+  }, []);
+
+  const getImageUrl = (filename: string) => `${config.API_BASE_URL}/image/${encodeURIComponent(filename)}`;
+
   const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.target as HTMLImageElement;
-    // Use natural dimensions for accurate face box calculations
     setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
   }, []);
 
@@ -128,6 +96,22 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
     return `1/${Math.round(1/time)}s`;
   };
 
+  const getSceneTypeColor = (sceneType: string): string => {
+    const colorMap: { [key: string]: string } = {
+      'Nature': 'bg-emerald-500/20 text-emerald-400',
+      'City': 'bg-blue-500/20 text-blue-400',
+      'Event': 'bg-purple-500/20 text-purple-400',
+      'Party': 'bg-pink-500/20 text-pink-400',
+      'Food': 'bg-orange-500/20 text-orange-400',
+      'Documents': 'bg-gray-500/20 text-gray-400',
+      'Receipts': 'bg-yellow-500/20 text-yellow-400',
+      'Other': 'bg-white/10 text-white/60',
+      'Unknown': 'bg-white/10 text-white/40'
+    };
+
+    return colorMap[sceneType] || colorMap['Unknown'];
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-8 sm:px-6 sm:py-12">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-8xl mx-auto">
@@ -145,7 +129,7 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
             {Array.from(loadedImages).includes(image.filename) ? (
               <div className="relative w-full h-full">
                 <Image 
-                  src={`http://localhost:8000/images/${encodeURIComponent(image.filename)}`} 
+                  src={getImageUrl(image.filename)}
                   alt={image.filename}
                   className="object-cover"
                   fill
@@ -168,7 +152,7 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
               <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
                 <p className="text-sm font-medium text-white/90 truncate mb-1">{image.filename}</p>
-                <p className="text-xs text-white/70">{image.scene_classification.scene_type}</p>
+                <p className="text-xs text-white/70">{image.scene_classification?.scene_type}</p>
               </div>
             </div>
           </div>
@@ -185,180 +169,294 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-6xl w-full bg-[#0a0a0a] rounded-2xl shadow-2xl border border-white/[0.02] backdrop-blur-xl">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setSelectedImage(null);
-                  setShowFaceOverlay(false);
-                  setSelectedFace(null);
-                }}
-                className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md transition-all duration-300 hover:scale-110 border border-white/[0.05] hover:border-white/[0.1]"
-              >
-                <XMarkIcon className="w-6 h-6 text-white" />
-              </button>
-              
-              <div className="p-8">
-                {selectedImage && (
-                  <div className="space-y-8">
-                    <div className="relative rounded-2xl overflow-hidden border border-white/5">
-                      <div className="flex">
-                        {/* Left side - Image */}
-                        <div className="flex-1 relative" style={{ aspectRatio: '16/9' }}>
-                          <div className="relative w-full h-full">
-                            <Image
-                              src={`http://localhost:8000/images/${encodeURIComponent(selectedImage.filename)}`}
-                              alt={selectedImage.filename}
-                              className="object-contain"
-                              fill
-                              sizes="100vw"
-                              priority={true}
-                              quality={90}
-                              unoptimized={true}
-                              onLoad={handleImageLoad}
-                              onError={(e) => {
-                                console.error(`Failed to load modal image: ${selectedImage.filename}`, e);
-                              }}
-                            />
-                            {/* Face detection overlay */}
-                            {showFaceOverlay && selectedImage.faces?.map((face, index) => {
-                              // Calculate relative coordinates based on natural image dimensions
-                              const relativeWidth = ((face.bbox[2] - face.bbox[0]) / imageSize.width);
-                              const relativeHeight = ((face.bbox[3] - face.bbox[1]) / imageSize.height);
-                              const relativeX = (face.bbox[0] / imageSize.width);
-                              const relativeY = (face.bbox[1] / imageSize.height);
+          <Dialog.Panel className="mx-auto max-w-7xl w-full bg-[#0a0a0a]/80 rounded-3xl shadow-2xl border border-white/[0.02] backdrop-blur-xl overflow-hidden">
+            {selectedImage && (
+              <div className="flex h-[85vh]">
+                {/* Left side - Image */}
+                <div className="flex-1 relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src={getImageUrl(selectedImage.filename)}
+                      alt={selectedImage.filename}
+                      className="object-contain"
+                      fill
+                      sizes="100vw"
+                      priority={true}
+                      quality={90}
+                      unoptimized={true}
+                      onLoad={handleImageLoad}
+                    />
+                    {/* Face detection overlay */}
+                    {showFaceOverlay && selectedImage.faces?.map((face, index) => {
+                      // Calculate relative coordinates based on the container size
+                      const imgElement = document.querySelector('.object-contain') as HTMLImageElement;
+                      if (!imgElement) return null;
 
-                              return (
-                                <div
-                                  key={index}
-                                  className={`absolute border-2 ${
-                                    selectedFace === face ? 'border-blue-400' : 'border-green-400'
-                                  } transition-colors cursor-pointer`}
-                                  style={{
-                                    left: `${relativeX * 100}%`,
-                                    top: `${relativeY * 100}%`,
-                                    width: `${relativeWidth * 100}%`,
-                                    height: `${relativeHeight * 100}%`,
-                                    transform: 'translate(0%, 0%)'  // Ensure no additional translation
-                                  }}
-                                  onMouseEnter={() => setSelectedFace(face)}
-                                  onMouseLeave={() => setSelectedFace(null)}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
+                      // Get actual rendered dimensions
+                      const containerWidth = imgElement.clientWidth;
+                      const containerHeight = imgElement.clientHeight;
+                      
+                      // Calculate scale factors
+                      const scaleX = containerWidth / imageSize.width;
+                      const scaleY = containerHeight / imageSize.height;
+                      const scale = Math.min(scaleX, scaleY);
 
-                        {/* Right side - Info panels */}
-                        <div className="w-96 ml-4 flex flex-col min-h-[600px]">
-                          <h3 className="text-xl font-semibold text-white mb-4">Details</h3>
-                          
-                          <div className="space-y-4 flex-1">
-                            {/* Face Attributes Panel */}
-                            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 shadow-lg h-[200px]">
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-white">Face Attributes</h3>
-                                <button
-                                  onClick={() => setShowFaceOverlay(!showFaceOverlay)}
-                                  className={`px-3 py-1.5 rounded-lg transition-all ${
-                                    showFaceOverlay
-                                      ? 'bg-green-500/20 text-green-400'
-                                      : 'bg-white/5 text-white/60 hover:text-white'
-                                  }`}
-                                >
-                                  {showFaceOverlay ? 'Hide Faces' : 'Show Faces'}
-                                </button>
-                              </div>
-                              {selectedFace && selectedFace.attributes && (
-                                <div className="mt-4 space-y-2">
-                                  <h4 className="text-sm font-medium text-white/80">Face Attributes</h4>
-                                  <div className="grid grid-cols-2 gap-4 text-sm text-white/60">
-                                    <div>
-                                      <p>Age: <span className={`
-                                        ${selectedFace.attributes.age === 'young' ? 'text-blue-400' : ''}
-                                        ${selectedFace.attributes.age === 'old' ? 'text-purple-400' : ''}
-                                        ${selectedFace.attributes.age === 'unknown' ? 'text-white/40' : ''}
-                                      `}>
-                                        {selectedFace.attributes.age.charAt(0).toUpperCase() + selectedFace.attributes.age.slice(1)}
-                                      </span></p>
-                                      <p>Gender: {selectedFace.attributes.gender}</p>
-                                      <p>Smile: {Math.round(selectedFace.attributes.smile_intensity * 100)}%</p>
-                                    </div>
-                                    <div>
-                                      <p>Eyes: <span className={`
-                                        ${selectedFace.attributes.eye_status === 'open' ? 'text-green-400' : ''}
-                                        ${selectedFace.attributes.eye_status === 'partially open' ? 'text-yellow-400' : ''}
-                                        ${selectedFace.attributes.eye_status === 'closed' ? 'text-red-400' : ''}
-                                        ${selectedFace.attributes.eye_status === 'unknown' ? 'text-white/40' : ''}
-                                      `}>
-                                        {selectedFace.attributes.eye_status.charAt(0).toUpperCase() + selectedFace.attributes.eye_status.slice(1)}
-                                      </span></p>
-                                      <p>Confidence: {Math.round(selectedFace.score * 100)}%</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                      // Calculate actual dimensions and position
+                      const width = (face.bbox[2] - face.bbox[0]) * scale;
+                      const height = (face.bbox[3] - face.bbox[1]) * scale;
+                      
+                      // Calculate offset for centering
+                      const offsetX = (containerWidth - imageSize.width * scale) / 2;
+                      const offsetY = (containerHeight - imageSize.height * scale) / 2;
 
-                            {/* Image Analysis Panel */}
-                            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 shadow-lg">
-                              <h3 className="text-lg font-semibold mb-3 text-white">Image Analysis</h3>
-                              <div className="space-y-2">
-                                <p className="text-white/90">Scene: {selectedImage.scene_classification.scene_type}</p>
-                                <p className="text-white/90">Objects: {selectedImage.objects.join(', ')}</p>
-                              </div>
-                            </div>
+                      // Calculate final position
+                      const left = face.bbox[0] * scale + offsetX;
+                      const top = face.bbox[1] * scale + offsetY;
 
-                            {/* Image Details Panel */}
-                            <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 shadow-lg">
-                              <h3 className="text-lg font-semibold mb-3 text-white">Image Details</h3>
-                              <div className="space-y-2">
-                                <div className="mt-4 grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center space-x-2 text-white/60">
-                                      <CalendarIcon className="w-4 h-4" />
-                                      <span className="text-sm">{formatDate(selectedImage.metadata.date_taken)}</span>
-                                    </div>
-                                    {selectedImage.metadata.camera_make && (
-                                      <div className="flex items-center space-x-2 text-white/60">
-                                        <CameraIcon className="w-4 h-4" />
-                                        <span className="text-sm">
-                                          {selectedImage.metadata.camera_make} {selectedImage.metadata.camera_model}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="space-y-2 text-sm text-white/60">
-                                    {selectedImage.metadata.focal_length && (
-                                      <p>Focal Length: {selectedImage.metadata.focal_length}mm</p>
-                                    )}
-                                    {selectedImage.metadata.f_number && (
-                                      <p>f/{selectedImage.metadata.f_number}</p>
-                                    )}
-                                    {selectedImage.metadata.exposure_time && (
-                                      <p>{formatShutterSpeed(selectedImage.metadata.exposure_time)}</p>
-                                    )}
-                                    {selectedImage.metadata.iso && (
-                                      <p>ISO {selectedImage.metadata.iso}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <p className="text-white/90">Dimensions: {selectedImage.metadata.dimensions}</p>
-                                <p className="text-white/90">Format: {selectedImage.metadata.format}</p>
-                                <p className="text-white/90">Size: {selectedImage.metadata.file_size}</p>
-                              </div>
-                            </div>
-                          </div>
+                      return (
+                        <div
+                          key={index}
+                          className={`absolute border-2 transition-all duration-200 ${
+                            selectedFace === face ? 'border-blue-500 shadow-lg' : 'border-white/40'
+                          }`}
+                          style={{
+                            left: `${left}px`,
+                            top: `${top}px`,
+                            width: `${width}px`,
+                            height: `${height}px`,
+                            cursor: 'pointer'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFace(face);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right side - Info panel */}
+                <div className="w-80 border-l border-white/[0.05] bg-black/20 backdrop-blur-xl p-6 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-medium text-white/90">{selectedImage.filename}</h3>
+                    <button
+                      onClick={() => {
+                        setSelectedImage(null);
+                        setShowFaceOverlay(false);
+                        setSelectedFace(null);
+                      }}
+                      className="p-1.5 rounded-full hover:bg-white/5 transition-colors"
+                    >
+                      <XMarkIcon className="w-5 h-5 text-white/70" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Scene Type */}
+                    {selectedImage.scene_classification && (
+                      <div className="space-y-1.5">
+                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm ${getSceneTypeColor(selectedImage.scene_classification.scene_type)}`}>
+                          {selectedImage.scene_classification.scene_type}
+                          <span className="ml-1.5 text-xs opacity-80">
+                            {Math.round(selectedImage.scene_classification.confidence * 100)}%
+                          </span>
                         </div>
                       </div>
+                    )}
+
+                    {/* Face Detection */}
+                    {selectedImage.faces.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-white/70">Faces Detected</span>
+                          <button
+                            onClick={() => setShowFaceOverlay(!showFaceOverlay)}
+                            className={`text-xs px-2 py-1 rounded-md transition-all ${
+                              showFaceOverlay
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10'
+                            }`}
+                          >
+                            {showFaceOverlay ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+                        
+                        {/* Fixed height container for face attributes */}
+                        <div className="h-[140px] bg-white/5 rounded-lg p-3 text-sm">
+                          {selectedFace && selectedFace.attributes ? (
+                            <div className="space-y-2 animate-fadeIn">
+                              <div className="flex items-center justify-between text-white/80">
+                                <span>Age</span>
+                                <span>{selectedFace.attributes.age}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-white/80">
+                                <span>Gender</span>
+                                <span>{selectedFace.attributes.gender}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-white/80">
+                                <span>Smile</span>
+                                <span>{Math.round(selectedFace.attributes.smile_intensity * 100)}%</span>
+                              </div>
+                              <div className="flex items-center justify-between text-white/80">
+                                <span>Eyes</span>
+                                <span>{selectedFace.attributes.eye_status}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-full flex items-center justify-center text-white/40 text-sm">
+                              Hover over a face to see details
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Text Recognition Results */}
+                    {selectedImage.text_recognition?.text_detected && selectedImage.text_recognition.raw_text && (
+                      <div className="mb-6 space-y-4">
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-white/70">Detected Text</h4>
+                          <div className="bg-white/5 rounded-lg p-4">
+                            <p className="text-sm text-white/80 whitespace-pre-wrap break-words">
+                              {selectedImage.text_recognition.raw_text}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {selectedImage.text_recognition.categories?.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-white/70">Text Categories</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedImage.text_recognition.categories.map((category, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 text-xs font-medium rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                                >
+                                  {category}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center space-x-2 text-sm text-white/60">
+                          <span>Confidence:</span>
+                          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-500 rounded-full"
+                              style={{ width: `${selectedImage.text_recognition.total_confidence * 100}%` }}
+                            />
+                          </div>
+                          <span>{Math.round(selectedImage.text_recognition.total_confidence * 100)}%</span>
+                        </div>
+                        
+                        {selectedImage.text_recognition.language && selectedImage.text_recognition.language !== 'unknown' && (
+                          <div className="text-sm text-white/60">
+                            <span>Language: </span>
+                            <span className="text-white/80">{selectedImage.text_recognition.language}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Camera Info */}
+                    {(selectedImage.metadata.camera_make || selectedImage.metadata.camera_model) && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-white/70">Camera Info</h4>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-white/60">
+                          {selectedImage.metadata.camera_make && (
+                            <div>
+                              <span className="block text-white/40">Make</span>
+                              <span>{selectedImage.metadata.camera_make}</span>
+                            </div>
+                          )}
+                          {selectedImage.metadata.camera_model && (
+                            <div>
+                              <span className="block text-white/40">Model</span>
+                              <span>{selectedImage.metadata.camera_model}</span>
+                            </div>
+                          )}
+                          {selectedImage.metadata.focal_length && (
+                            <div>
+                              <span className="block text-white/40">Focal Length</span>
+                              <span>{selectedImage.metadata.focal_length}</span>
+                            </div>
+                          )}
+                          {selectedImage.metadata.f_number && (
+                            <div>
+                              <span className="block text-white/40">F-Stop</span>
+                              <span>ƒ/{selectedImage.metadata.f_number}</span>
+                            </div>
+                          )}
+                          {selectedImage.metadata.exposure_time && (
+                            <div>
+                              <span className="block text-white/40">Shutter</span>
+                              <span>{formatShutterSpeed(selectedImage.metadata.exposure_time)}</span>
+                            </div>
+                          )}
+                          {selectedImage.metadata.iso && (
+                            <div>
+                              <span className="block text-white/40">ISO</span>
+                              <span>{selectedImage.metadata.iso}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* File Info */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-white/70">File Info</h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-white/60">
+                        <div>
+                          <span className="block text-white/40">Dimensions</span>
+                          <span>{selectedImage.metadata.dimensions}</span>
+                        </div>
+                        <div>
+                          <span className="block text-white/40">Format</span>
+                          <span>{selectedImage.metadata.format}</span>
+                        </div>
+                        <div>
+                          <span className="block text-white/40">Size</span>
+                          <span>{selectedImage.metadata.file_size}</span>
+                        </div>
+                        {selectedImage.metadata.date_taken && (
+                          <div>
+                            <span className="block text-white/40">Date</span>
+                            <span>{formatDate(selectedImage.metadata.date_taken)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Location Map */}
+                    {selectedImage.metadata.gps && (
+                      <div className="space-y-2 pt-4 border-t border-white/[0.05]">
+                        <h4 className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+                          <MapPinIcon className="w-4 h-4" />
+                          Location
+                        </h4>
+                        <div className="h-[200px] bg-white/5 rounded-lg overflow-hidden">
+                          <ImageMap
+                            singleLocation={{
+                              latitude: selectedImage.metadata.gps.latitude,
+                              longitude: selectedImage.metadata.gps.longitude
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs text-white/60 mt-1">
+                          {selectedImage.metadata.gps.latitude.toFixed(6)}, {selectedImage.metadata.gps.longitude.toFixed(6)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
           </Dialog.Panel>
         </div>
       </Dialog>

@@ -29,7 +29,7 @@ class FaceDetector:
             
             # Dictionary to store face embeddings and their associated images
             self.face_db = {}
-            self.similarity_threshold = 0.6
+            self.similarity_threshold = 0.5
             
             # Create faces directory
             self.faces_dir = Path("./images/faces")

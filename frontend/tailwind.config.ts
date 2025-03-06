@@ -6,6 +6,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)'],
+      },
       animation: {
         'fadeIn': 'fadeIn 0.5s ease-out',
         'shimmer': 'shimmer 2s linear infinite',
