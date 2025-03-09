@@ -39,10 +39,24 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
+  const [config, setConfig] = useState<{ API_BASE_URL: string }>({ API_BASE_URL: 'http://localhost:8000' });
+
+  useEffect(() => {
+    // Fetch config from backend
+    fetch(`${config.API_BASE_URL}/config`)
+      .then(res => res.json())
+      .then(data => {
+        console.log('Backend config:', data);
+        setConfig(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch backend config:', err);
+      });
+  }, []);
 
   useEffect(() => {
     analyzeImages();
-  }, []);
+  }, [config.API_BASE_URL]);
 
   const analyzeImages = async () => {
     setLoading(true);
@@ -53,7 +67,7 @@ export default function Home() {
     setTotalImages(0);
 
     try {
-      const response = await fetch('http://localhost:8000/analyze-folder');
+      const response = await fetch(`${config.API_BASE_URL}/analyze-folder`);
       if (!response.body) throw new Error('No response body');
 
       const reader = response.body.getReader();
@@ -84,13 +98,32 @@ export default function Home() {
             if (data.complete) {
               console.log('Received complete data:', data.results);
               const processedResults = data.results.map((result: any) => {
-                console.log('Processing result:', result.filename, 'GPS:', result.metadata?.gps);
+                console.log('Processing result:', result.filename, 'Metadata:', result.metadata);
                 return {
-                  ...result,
+                  filename: result.filename,
+                  metadata: {
+                    date_taken: result.metadata?.date_taken || null,
+                    camera_make: result.metadata?.camera_make || null,
+                    camera_model: result.metadata?.camera_model || null,
+                    focal_length: result.metadata?.focal_length || null,
+                    exposure_time: result.metadata?.exposure_time || null,
+                    f_number: result.metadata?.f_number || null,
+                    iso: result.metadata?.iso || null,
+                    dimensions: result.metadata?.dimensions || '',
+                    format: result.metadata?.format || '',
+                    file_size: result.metadata?.file_size || '',
+                    gps: result.metadata?.gps || null
+                  },
+                  faces: result.faces || [],
+                  objects: result.objects || [],
+                  scene_classification: result.scene_classification || null,
                   text_recognition: result.text_recognition || {
                     text_detected: false,
                     text_blocks: [],
-                    total_confidence: 0
+                    total_confidence: 0,
+                    categories: [],
+                    raw_text: '',
+                    language: ''
                   }
                 };
               });
@@ -104,12 +137,39 @@ export default function Home() {
               
               // Handle single image result
               if (data.latest_result) {
-                console.log('Received latest result:', data.latest_result.filename, 'GPS:', data.latest_result.metadata?.gps);
+                console.log('Processing latest result:', data.latest_result.filename, 'Metadata:', data.latest_result.metadata);
+                const processedResult = {
+                  filename: data.latest_result.filename,
+                  metadata: {
+                    date_taken: data.latest_result.metadata?.date_taken || null,
+                    camera_make: data.latest_result.metadata?.camera_make || null,
+                    camera_model: data.latest_result.metadata?.camera_model || null,
+                    focal_length: data.latest_result.metadata?.focal_length || null,
+                    exposure_time: data.latest_result.metadata?.exposure_time || null,
+                    f_number: data.latest_result.metadata?.f_number || null,
+                    iso: data.latest_result.metadata?.iso || null,
+                    dimensions: data.latest_result.metadata?.dimensions || '',
+                    format: data.latest_result.metadata?.format || '',
+                    file_size: data.latest_result.metadata?.file_size || '',
+                    gps: data.latest_result.metadata?.gps || null
+                  },
+                  faces: data.latest_result.faces || [],
+                  objects: data.latest_result.objects || [],
+                  scene_classification: data.latest_result.scene_classification || null,
+                  text_recognition: data.latest_result.text_recognition || {
+                    text_detected: false,
+                    text_blocks: [],
+                    total_confidence: 0,
+                    categories: [],
+                    raw_text: '',
+                    language: ''
+                  }
+                };
                 setImages(prev => {
                   if (prev.find(img => img.filename === data.latest_result.filename)) {
                     return prev;
                   }
-                  return [...prev, data.latest_result];
+                  return [...prev, processedResult];
                 });
               }
             }

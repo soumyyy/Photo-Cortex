@@ -3,16 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
-
-interface ImageData {
-  filename: string;
-  metadata: {
-    gps: {
-      latitude: number;
-      longitude: number;
-    } | null;
-  };
-}
+import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { ImageAnalysis } from '../types/ImageAnalysis';
 
 interface MapBounds {
   center: [number, number];
@@ -20,15 +12,16 @@ interface MapBounds {
 }
 
 interface MapClientProps {
-  images?: ImageData[];
+  images?: ImageAnalysis[];
   config: MapBounds;
   singleLocation?: {
     latitude: number;
     longitude: number;
   };
+  selectedImage?: ImageAnalysis;
 }
 
-const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
+const MapClient = ({ images, config, singleLocation, selectedImage }: MapClientProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -128,7 +121,7 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
           }, 100);
         } else if (images) {
           // Add markers for multiple images with GPS data
-          const imagesWithGps = images.filter((img): img is ImageData & { metadata: { gps: NonNullable<ImageData['metadata']['gps']> } } => 
+          const imagesWithGps = images.filter((img): img is ImageAnalysis & { metadata: { gps: NonNullable<ImageAnalysis['metadata']['gps']> } } => 
             img.metadata.gps !== null
           );
 
@@ -178,12 +171,78 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
     };
   }, [config, images, singleLocation, isClient]);
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+    });
+  };
+
   return (
-    <div 
-      ref={mapContainerRef} 
-      className="absolute inset-0" 
-      style={{ minHeight: '400px' }}
-    />
+    <div className="flex h-full">
+      {/* Map Container */}
+      <div 
+        ref={mapContainerRef}
+        className="flex-1 relative h-full rounded-xl overflow-hidden bg-[#0a0a0a]/80 border border-white/[0.02]"
+      >
+        {/* Map will be rendered here */}
+      </div>
+
+      {/* Sidebar */}
+      {selectedImage && (
+        <div className="w-80 ml-4 glass-panel custom-scrollbar">
+          <div className="p-6 space-y-6">
+            {/* Image Preview */}
+            <div className="relative aspect-square rounded-lg overflow-hidden bg-black/20">
+              <img
+                src={selectedImage.filename}
+                alt={selectedImage.filename}
+                className="object-cover"
+              />
+            </div>
+
+            {/* Image Details */}
+            <div>
+              <h3 className="text-lg font-medium text-white/90 mb-4">Image Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-white/60 mb-1">Filename</p>
+                  <p className="text-sm text-white/90">{selectedImage.filename}</p>
+                </div>
+
+                {selectedImage.metadata?.date_taken && (
+                  <div>
+                    <p className="text-sm font-medium text-white/60 mb-1">
+                      <CalendarIcon className="w-4 h-4 inline mr-1" />
+                      Date Taken
+                    </p>
+                    <p className="text-sm text-white/90">
+                      {formatDate(selectedImage.metadata.date_taken)}
+                    </p>
+                  </div>
+                )}
+
+                {selectedImage.metadata?.gps && (
+                  <div>
+                    <p className="text-sm font-medium text-white/60 mb-1">
+                      <MapPinIcon className="w-4 h-4 inline mr-1" />
+                      Location
+                    </p>
+                    <p className="text-sm text-white/90">
+                      {`${selectedImage.metadata.gps.latitude.toFixed(6)}, ${selectedImage.metadata.gps.longitude.toFixed(6)}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

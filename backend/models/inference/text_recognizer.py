@@ -92,7 +92,7 @@ class PhotoOCR:
                 
                 # Use the correct path relative to the current file
                 current_dir = Path(__file__).parent.parent.parent
-                east_model_path = current_dir / 'weights' / 'ocr' / 'frozen_east_text_detection.pb'
+                east_model_path = current_dir / 'models' / 'weights' / 'ocr' / 'frozen_east_text_detection.pb'
                 
                 self.logger.info(f"Looking for EAST model at: {east_model_path}")
                 

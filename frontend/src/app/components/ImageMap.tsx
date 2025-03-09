@@ -2,22 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { ImageAnalysis } from '../types/ImageAnalysis';
 
 const MapClient = dynamic(() => import('./MapClient'), { ssr: false });
-
-interface GPS {
-  latitude: number;
-  longitude: number;
-}
-
-interface ImageMetadata {
-  gps: GPS | null;
-}
-
-interface ImageAnalysis {
-  filename: string;
-  metadata: ImageMetadata;
-}
 
 interface MapBounds {
   center: [number, number];

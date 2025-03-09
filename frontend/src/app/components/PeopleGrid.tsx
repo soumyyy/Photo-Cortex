@@ -9,30 +9,57 @@ interface UniqueFace {
   face_images: string[];
 }
 
+interface Config {
+  API_BASE_URL: string;
+}
+
 export default function PeopleGrid() {
   const [uniqueFaces, setUniqueFaces] = useState<UniqueFace[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPerson, setSelectedPerson] = useState<UniqueFace | null>(null);
+  const [config, setConfig] = useState<Config>({ API_BASE_URL: 'http://localhost:8000' });
 
   useEffect(() => {
-    fetchUniqueFaces();
+    // Fetch config from backend
+    fetch(`${config.API_BASE_URL}/config`)
+      .then(res => res.json())
+      .then(data => {
+        console.log('Backend config:', data);
+        setConfig(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch backend config:', err);
+      });
   }, []);
 
-  const fetchUniqueFaces = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/unique-faces');
-      const data = await response.json();
-      setUniqueFaces(data.unique_faces || []);
-    } catch (error) {
-      console.error('Failed to fetch unique faces:', error);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    const fetchUniqueFaces = async () => {
+      try {
+        const response = await fetch(`${config.API_BASE_URL}/unique-faces`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch unique faces');
+        }
+        const data = await response.json();
+        setUniqueFaces(data.unique_faces || []);
+      } catch (error) {
+        console.error('Error fetching unique faces:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUniqueFaces();
+  }, [config.API_BASE_URL]);
+
+  // Helper function to get face image URL
+  const getFaceImageUrl = (filename: string) => {
+    const encodedFilename = encodeURIComponent(filename);
+    return `${config.API_BASE_URL}/image/${encodedFilename}`;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-12 custom-scrollbar">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
         <span className="ml-3 text-gray-400">Loading faces...</span>
       </div>
@@ -40,34 +67,32 @@ export default function PeopleGrid() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-[#050505] p-4 sm:p-6 custom-scrollbar">
       {/* Grid of unique faces */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-8xl mx-auto">
         {uniqueFaces.map((person) => (
           <div
             key={person.id}
-            className="relative bg-gray-800 rounded-lg overflow-hidden cursor-pointer group"
+            className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] aspect-square transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
             onClick={() => setSelectedPerson(person)}
           >
             {/* Show the first face cutout for this person */}
             <div className="aspect-square relative">
               <Image
-                src={`http://localhost:8000/images/${encodeURIComponent(person.face_images[0])}`}
+                src={getFaceImageUrl(person.face_images[0])}
                 alt={`Person ${person.id}`}
                 fill
                 className="object-cover"
-                onError={(e) => {
-                  console.error(`Failed to load face image: ${person.face_images[0]}`);
-                  // If face image fails, try showing the first regular image instead
-                  if (person.images.length > 0) {
-                    (e.target as HTMLImageElement).src = `http://localhost:8000/images/${encodeURIComponent(person.images[0])}`;
-                  }
-                }}
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                unoptimized={true}
               />
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform">
-              <p className="text-sm text-white">{person.images.length} photos</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+              <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
+                <p className="text-sm font-medium text-white/90 truncate">{person.images.length} photos</p>
+                <p className="text-xs text-white/70">Person {person.id}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -75,32 +100,63 @@ export default function PeopleGrid() {
 
       {/* Modal for showing all images of a person */}
       {selectedPerson && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl text-white">All Photos ({selectedPerson.images.length})</h3>
-              <button
-                onClick={() => setSelectedPerson(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {selectedPerson.images.map((image, index) => (
-                <div key={index} className="aspect-square relative bg-gray-800 rounded-lg overflow-hidden">
-                  <Image
-                    src={`http://localhost:8000/images/${encodeURIComponent(image)}`}
-                    alt={`Photo ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    onError={(e) => {
-                      console.error(`Failed to load person image: ${image}`);
-                    }}
-                  />
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 custom-scrollbar">
+          <div className="mx-auto max-w-7xl w-full glass-panel shadow-2xl overflow-hidden">
+            <div className="flex h-[85vh]">
+              {/* Left side - Face Preview */}
+              <div className="flex-1 relative flex flex-col p-4">
+                {/* Top Bar */}
+                <div className="flex items-center justify-between mb-4 p-3 glass-panel">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-medium text-white/90">Person {selectedPerson.id}</h2>
+                    <span className="px-2 py-1 rounded-lg text-xs bg-white/[0.05] text-white/70">
+                      {selectedPerson.images.length} photos
+                    </span>
+                  </div>
                 </div>
-              ))}
+                
+                {/* Face Preview */}
+                <div className="flex-1 relative flex items-center justify-center glass-panel p-4">
+                  <div className="relative w-96 h-96">
+                    <Image
+                      src={getFaceImageUrl(selectedPerson.face_images[0])}
+                      alt="Selected Person"
+                      fill
+                      className="object-cover rounded-lg"
+                      unoptimized={true}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right side - Appearances */}
+              <div className="w-80 border-l border-white/[0.05] custom-scrollbar">
+                <div className="p-6 space-y-6">
+                  <h3 className="text-lg font-medium text-white/90 mb-4">Photos</h3>
+                  <div className="grid gap-4">
+                    {selectedPerson.images.map((image, index) => (
+                      <div 
+                        key={index}
+                        className="relative aspect-square rounded-lg overflow-hidden glass-panel"
+                      >
+                        <Image
+                          src={getFaceImageUrl(image)}
+                          alt={`Face ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="320px"
+                          unoptimized={true}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <p className="text-sm text-white/90 truncate">{image}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
