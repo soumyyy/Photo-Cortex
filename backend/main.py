@@ -18,13 +18,28 @@ from PIL.ExifTags import TAGS
 from PIL.TiffImagePlugin import IFDRational
 from fractions import Fraction
 from typing import AsyncGenerator, List, Optional, Dict, Any
+import time
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(), logging.FileHandler('app.log')]
+    format='%(message)s',  # Just the message, no level or timestamps
+    handlers=[
+        logging.StreamHandler(),  # Console output
+        logging.FileHandler('app.log')  # File output with full details
+    ]
 )
+
+# Set more detailed format for file handler only
+for handler in logging.root.handlers:
+    if isinstance(handler, logging.FileHandler):
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+# Set higher log level for most modules to reduce noise
+logging.getLogger('models.inference').setLevel(logging.WARNING)
+logging.getLogger('uvicorn').setLevel(logging.WARNING)
+logging.getLogger('fastapi').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 # Prepare EXIF tag mapping
@@ -132,6 +147,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
 # Initialize the analyzer only once
 from models.inference import ImageAnalyzer
 analyzer = ImageAnalyzer()
+logger.info("PhotoCortex models loaded and ready")
 
 app = FastAPI()
 
@@ -262,7 +278,7 @@ async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
                 result = {
                     "filename": image_path.name,
                     "faces": face_results.get("faces", []),
-                    "objects": [obj["class"] for obj in object_results] if object_results else [],
+                    "objects": sorted(list(set(obj["class"] for obj in object_results))) if object_results else [],
                     "scene_classification": {
                         "scene_type": scene_results.get("scene_type", "unknown"),
                         "confidence": float(scene_results.get("confidence", 0.0)),
@@ -514,6 +530,78 @@ async def analyze_face(image_name: str):
     except Exception as e:
         logger.error(f"Error analyzing face: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/scan-text")
+async def scan_text(file_data: dict):
+    """
+    Scan text in an image using the PhotoOCR class.
+    """
+    try:
+        filename = file_data.get("filename")
+        if not filename:
+            raise HTTPException(status_code=400, detail="Filename is required")
+            
+        # Use the correct image directory from APP_CONFIG
+        image_path = IMAGES_DIR / filename
+        
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+            
+        # Read the image
+        image = cv2.imread(str(image_path))
+        if image is None:
+            raise HTTPException(status_code=400, detail=f"Could not read image: {filename}")
+            
+        # Initialize PhotoOCR if not already initialized
+        if not hasattr(analyzer, "photo_ocr"):
+            from models.inference.text_recognizer import PhotoOCR
+            try:
+                analyzer.photo_ocr = PhotoOCR()
+            except Exception as e:
+                logger.error(f"Failed to initialize PhotoOCR: {str(e)}")
+                raise HTTPException(status_code=500, detail="Failed to initialize text recognition model")
+            
+        # Process the image
+        try:
+            start_time = time.time()
+            result = analyzer.photo_ocr.process_image(image)
+            processing_time = time.time() - start_time
+            
+            # Add processing time to the result
+            if isinstance(result, dict):
+                result['processing_time'] = processing_time
+            else:
+                result = {
+                    'text_blocks': result,
+                    'processing_time': processing_time
+                }
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing image: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to process image for text recognition")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error scanning text: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during text scanning")
+
+# Custom filter to remove unnecessary log messages
+class LogFilter(logging.Filter):
+    def filter(self, record):
+        # Allow specific initialization messages we want to see
+        if record.name == "__main__" and "ready" in record.getMessage().lower():
+            return True
+        # Filter out most other messages
+        if record.levelno == logging.INFO:
+            return False
+        return True
+
+# Apply filter to console handler only
+for handler in logging.root.handlers:
+    if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+        handler.addFilter(LogFilter())
 
 if __name__ == "__main__":
     import uvicorn

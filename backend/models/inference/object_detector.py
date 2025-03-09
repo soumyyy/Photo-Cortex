@@ -1,7 +1,10 @@
 import os
+# Set these environment variables before importing YOLO
 os.environ["ULTRALYTICS_HIDE_CONSOLE"] = "1"
 os.environ["ULTRALYTICS_HUB_API"] = "false"
 os.environ["ULTRALYTICS_LOGGER_VERBOSE"] = "false"
+# Add this new environment variable
+os.environ["YOLO_VERBOSE"] = "False"
 
 from ultralytics import YOLO
 import numpy as np
@@ -10,6 +13,7 @@ import logging
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import warnings
+import sys
 
 # Filter out PyTorch TypedStorage deprecation warning
 warnings.filterwarnings('ignore', message='TypedStorage is deprecated')
@@ -33,11 +37,28 @@ class ObjectDetector:
             return
             
         try:
-            # Suppress YOLO initialization messages
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            # Create null device to discard output
+            null_device = open(os.devnull, 'w')
+            
+            # Save original stdout/stderr
+            original_stdout = sys.stdout
+            original_stderr = sys.stderr
+            
+            # Redirect stdout/stderr to null device
+            sys.stdout = null_device
+            sys.stderr = null_device
+            
+            try:
+                # Initialize model without verbose parameter
                 self.model = YOLO(model_path)
                 self._initialized = True
-            logger.info("YOLOv8s model initialized successfully")
+                logger.info("YOLOv8s model initialized successfully")
+            finally:
+                # Restore original stdout/stderr
+                sys.stdout = original_stdout
+                sys.stderr = original_stderr
+                null_device.close()
+                
         except Exception as e:
             logger.error(f"Error loading YOLOv8 model: {str(e)}")
             self.model = None
@@ -48,9 +69,17 @@ class ObjectDetector:
             return []
 
         try:
-            # Suppress YOLO output during inference
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                results = self.model(image, verbose=False)
+            # Use the same approach for inference
+            null_device = open(os.devnull, 'w')
+            original_stdout, original_stderr = sys.stdout, sys.stderr
+            sys.stdout, sys.stderr = null_device, null_device
+            
+            try:
+                # Call the model without verbose parameter
+                results = self.model(image)
+            finally:
+                sys.stdout, sys.stderr = original_stdout, original_stderr
+                null_device.close()
 
             detections = []
             for result in results:

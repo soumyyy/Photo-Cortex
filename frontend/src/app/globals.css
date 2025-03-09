@@ -1,7 +1,11 @@
-/* eslint-disable */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 5, 5, 5;
+}
 
 @layer base {
   body {
@@ -9,131 +13,171 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* Glass morphism effects */
-.glass-panel {
-  @apply bg-black/20 backdrop-blur-md border border-white/[0.02] hover:border-white/[0.08] transition-all duration-500;
-}
-
-.glass-panel-hover {
-  @apply hover:shadow-lg hover:shadow-black/40;
-}
-
-/* Smooth transitions */
-.smooth-transition {
-  @apply transition-all duration-500;
-}
-
-/* Button styles */
-.btn-glass {
-  @apply px-4 py-2 rounded-xl bg-black/20 hover:bg-black/40 backdrop-blur-md 
-         border border-white/[0.05] hover:border-white/[0.1] 
-         transition-all duration-300 hover:scale-105;
-}
-
-/* Tab styles */
-.tab-button {
-  @apply px-4 py-3 rounded-xl text-sm font-medium 
-         bg-black/20 hover:bg-black/30 backdrop-blur-sm 
-         border border-white/[0.02] hover:border-white/[0.08] 
-         transition-all duration-300;
-}
-
-.tab-button-active {
-  @apply bg-white/10 border-white/10;
-}
-
-/* Card styles */
-.card-glass {
-  @apply bg-black/20 backdrop-blur-md rounded-2xl 
-         border border-white/[0.02] hover:border-white/[0.08] 
-         transition-all duration-500 hover:shadow-lg hover:shadow-black/40;
-}
-
-/* Map Container Styles */
-.leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-  z-index: 1;
-}
-
-.leaflet-tile-container {
-  filter: brightness(0.9) contrast(1.1);
-}
-
-.leaflet-control-container .leaflet-control {
-  z-index: 1000;
-}
-
-.leaflet-pane {
-  z-index: 1;
-}
-
-.leaflet-top,
-.leaflet-bottom {
-  z-index: 1000;
-}
-
-/* Marker Styles */
-.custom-marker {
-  position: relative;
-  width: 24px !important;
-  height: 24px !important;
-  margin-left: -12px !important;
-  margin-top: -12px !important;
-  background: transparent !important;
-  border: none !important;
-}
-
-.marker-inner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background: #3b82f6;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8),
-              0 0 8px rgba(59, 130, 246, 0.8);
-}
-
-.marker-pulse {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  background: rgba(59, 130, 246, 0.15);
-  border-radius: 50%;
-  animation: pulse 2s ease-out infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: translate(-50%, -50%) scale(0.5);
-    opacity: 1;
+@layer components {
+  .glass-panel {
+    @apply bg-white/[0.02] border border-white/[0.05] backdrop-blur-xl rounded-xl;
   }
-  100% {
-    transform: translate(-50%, -50%) scale(2);
-    opacity: 0;
+
+  .glass-panel-hover {
+    @apply hover:shadow-lg hover:shadow-black/40;
+  }
+
+  .smooth-transition {
+    @apply transition-all duration-500;
+  }
+
+  .btn-glass {
+    @apply px-4 py-2 rounded-xl bg-black/20 hover:bg-black/40 backdrop-blur-md 
+           border border-white/[0.05] hover:border-white/[0.1] 
+           transition-all duration-300 hover:scale-105;
+  }
+
+  .tab-button {
+    @apply px-4 py-3 rounded-xl text-sm font-medium 
+           bg-black/20 hover:bg-black/30 backdrop-blur-sm 
+           border border-white/[0.02] hover:border-white/[0.08] 
+           transition-all duration-300;
+  }
+
+  .tab-button-active {
+    @apply bg-white/10 border-white/10;
+  }
+
+  .card-glass {
+    @apply bg-black/20 backdrop-blur-md rounded-2xl 
+           border border-white/[0.02] hover:border-white/[0.08] 
+           transition-all duration-500 hover:shadow-lg hover:shadow-black/40;
+  }
+
+  .text-region-highlight {
+    @apply absolute bg-yellow-400/20 border border-yellow-400/40 rounded-sm 
+           shadow-[0_0_12px_rgba(255,255,0,0.15)] transition-all duration-500 
+           pointer-events-auto cursor-pointer z-10 backdrop-brightness-150;
+    animation: highlightAppear 0.5s ease-out;
+  }
+
+  .text-region-highlight:hover {
+    @apply bg-yellow-400/30 border-yellow-400/60 
+           shadow-[0_0_16px_rgba(255,255,0,0.25)] scale-[1.02]
+           backdrop-brightness-200;
+  }
+
+  .text-region-highlight .tooltip {
+    @apply absolute -top-7 left-1/2 -translate-x-1/2 -translate-y-1 
+           bg-black/90 text-white px-3 py-1.5 rounded-lg text-xs whitespace-nowrap 
+           opacity-0 invisible transition-all duration-300 pointer-events-none z-20
+           shadow-lg shadow-black/50;
+  }
+
+  .text-region-highlight:hover .tooltip {
+    @apply opacity-100 visible -translate-y-0;
+  }
+
+  .highlight-container {
+    @apply absolute inset-0 pointer-events-none;
+  }
+
+  .image-dimmed {
+    @apply brightness-75 contrast-125 transition-all duration-500;
+  }
+
+  .scan-button {
+    @apply px-3 py-1.5 rounded-lg text-sm font-medium
+           bg-white/[0.02] hover:bg-white/[0.05] backdrop-blur-md 
+           border border-white/[0.1] hover:border-white/[0.2] 
+           transition-all duration-300
+           flex items-center gap-2
+           shadow-lg shadow-black/20;
+  }
+
+  .scan-button.active {
+    @apply bg-yellow-500/10 border-yellow-500/30 text-yellow-400
+           hover:bg-yellow-500/20 hover:border-yellow-500/40;
+  }
+
+  .scan-button:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .leaflet-container {
+    @apply w-full h-full z-1;
+  }
+
+  .leaflet-tile-container {
+    @apply filter brightness-[0.9] contrast-125;
+  }
+
+  .leaflet-control-container .leaflet-control {
+    @apply z-1000;
+  }
+
+  .leaflet-pane {
+    @apply z-1;
+  }
+
+  .leaflet-top,
+  .leaflet-bottom {
+    @apply z-1000;
+  }
+
+  /* Map Marker Styles */
+  .custom-marker {
+    @apply relative w-6 h-6 -ml-3 -mt-3 bg-transparent border-none;
+  }
+
+  .marker-inner {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-[#3b82f6] rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)] shadow-[0_0_8px_rgba(59,130,246,0.8)];
+  }
+
+  .marker-pulse {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-[rgba(59,130,246,0.15)] rounded-full;
+    animation: pulse 2s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2);
+      opacity: 0;
+    }
+  }
+
+  @keyframes highlightAppear {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+      filter: brightness(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.03);
+      filter: brightness(1.5);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1.2);
+    }
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar {
+    @apply w-2;
+  }
+
+  .custom-scrollbar-track {
+    @apply bg-black/30;
+  }
+
+  .custom-scrollbar-thumb {
+    @apply bg-white/10 rounded-md;
+  }
+
+  .custom-scrollbar-thumb:hover {
+    @apply bg-white/15;
   }
 }

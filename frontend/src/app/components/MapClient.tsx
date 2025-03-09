@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 interface ImageData {
   filename: string;
@@ -32,22 +32,28 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     let mounted = true;
     let initTimer: NodeJS.Timeout;
 
     const initMap = () => {
       if (!mounted || !mapContainerRef.current) return;
 
-      // Debug logs
-      console.log('Map initialization starting');
-      console.log('Config:', config);
-      console.log('Single location:', singleLocation);
-      console.log('Container dimensions:', {
-        width: mapContainerRef.current.clientWidth,
-        height: mapContainerRef.current.clientHeight
-      });
+      // Ensure container has dimensions
+      const container = mapContainerRef.current;
+      if (container.clientHeight === 0 || container.clientWidth === 0) {
+        console.warn('Map container has no dimensions, retrying...');
+        initTimer = setTimeout(initMap, 100);
+        return;
+      }
 
       // Cleanup existing map and markers
       if (mapRef.current) {
@@ -59,19 +65,14 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
         mapRef.current = null;
       }
 
-      // Ensure container has dimensions
-      const container = mapContainerRef.current;
-      if (container.clientHeight === 0 || container.clientWidth === 0) {
-        console.warn('Map container has no dimensions, retrying...');
-        initTimer = setTimeout(initMap, 100);
-        return;
-      }
-
       try {
         // Light map style with attribution
         const mapStyle = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
 
-        // Initialize map
+        // Initialize map with explicit dimensions
+        container.style.width = '100%';
+        container.style.height = '100%';
+
         const map = L.map(container, {
           zoomControl: true,
           center: config.center,
@@ -84,7 +85,6 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
           ]
         });
 
-        console.log('Map created:', map);
         mapRef.current = map;
 
         // Add zoom control with custom styling
@@ -111,32 +111,21 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
         if (singleLocation) {
           // Add single marker
           const coords: [number, number] = [singleLocation.latitude, singleLocation.longitude];
-          console.log('Adding marker at coordinates:', coords);
-          
           const marker = L.marker(coords, { 
             icon,
-            zIndexOffset: 1000 // Ensure marker is above other elements
+            zIndexOffset: 1000
           });
           marker.addTo(markerGroup);
           
-          // Set a closer zoom and ensure proper centering
-          map.setView(coords, 16, {
-            animate: true,
-            duration: 1
-          });
-          
-          // Double-check centering after a short delay
+          // Set view with a delay to ensure container is ready
           setTimeout(() => {
             if (mounted && mapRef.current) {
               mapRef.current.invalidateSize();
               mapRef.current.setView(coords, 16, {
-                animate: true,
-                duration: 0.5
+                animate: false
               });
             }
-          }, 250);
-          
-          console.log('Map view set to coordinates');
+          }, 100);
         } else if (images) {
           // Add markers for multiple images with GPS data
           const imagesWithGps = images.filter((img): img is ImageData & { metadata: { gps: NonNullable<ImageData['metadata']['gps']> } } => 
@@ -145,33 +134,35 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
 
           imagesWithGps.forEach(image => {
             const coords = [image.metadata.gps.latitude, image.metadata.gps.longitude];
-            console.log('Adding marker at coordinates:', coords);
             const marker = L.marker(coords as [number, number], { icon });
             marker.addTo(markerGroup);
           });
 
-          // Fit bounds for multiple locations
-          if (config.bounds) {
-            map.fitBounds(config.bounds);
-            console.log('Map bounds set');
-          }
+          // Fit bounds with a delay
+          setTimeout(() => {
+            if (mounted && mapRef.current && config.bounds) {
+              mapRef.current.invalidateSize();
+              mapRef.current.fitBounds(config.bounds, {
+                animate: false
+              });
+            }
+          }, 100);
         }
 
-        // Force a resize after initialization
-        requestAnimationFrame(() => {
+        // Final resize after all operations
+        setTimeout(() => {
           if (mounted && mapRef.current) {
             mapRef.current.invalidateSize();
-            console.log('Map size invalidated');
           }
-        });
+        }, 250);
 
       } catch (error) {
         console.error('Error initializing map:', error);
       }
     };
 
-    // Start initialization
-    initTimer = setTimeout(initMap, 100);
+    // Start initialization with a delay
+    initTimer = setTimeout(initMap, 250);
 
     return () => {
       mounted = false;
@@ -185,9 +176,18 @@ const MapClient = ({ images, config, singleLocation }: MapClientProps) => {
         mapRef.current = null;
       }
     };
-  }, [config, images, singleLocation]);
+  }, [config, images, singleLocation, isClient]);
 
-  return <div ref={mapContainerRef} className="absolute inset-0" />;
+  return (
+    <div 
+      ref={mapContainerRef} 
+      className="absolute inset-0" 
+      style={{ minHeight: '400px' }}
+    />
+  );
 };
 
-export default MapClient;
+// Export with dynamic import to prevent SSR issues
+export default dynamic(() => Promise.resolve(MapClient), {
+  ssr: false
+});
