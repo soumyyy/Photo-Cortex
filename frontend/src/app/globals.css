@@ -149,7 +149,7 @@
   }
 
   .marker-inner {
-    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-[#3b82f6] rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)] shadow-[0_0_8px_rgba(59,130,246,0.8)];
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-[#3b82f6] rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)];
   }
 
   .marker-pulse {
@@ -189,23 +189,59 @@
            backdrop-blur-sm
            border border-white/[0.02];
   }
-}
 
-@keyframes highlightAppear {
-  0% {
+  /* Face Detection Highlights */
+  .face-region-highlight {
+    position: absolute;
+    border: 2px solid rgba(0, 255, 0, 0.5);
+    background-color: rgba(0, 255, 0, 0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    animation: fadeIn 0.3s ease-out forwards;
     opacity: 0;
-    transform: scale(0.95);
-    filter: brightness(1);
+    transition: all 0.2s ease-out;
+    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
   }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.03);
-    filter: brightness(1.5);
+
+  .face-region-highlight:hover {
+    background-color: rgba(0, 255, 0, 0.15);
+    border-color: rgba(0, 255, 0, 0.7);
+    box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
   }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-    filter: brightness(1.2);
+
+  .face-region-highlight.selected {
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(0, 255, 0, 0.3);
+    z-index: 10;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(1.1);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes highlightAppear {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+      filter: brightness(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.03);
+      filter: brightness(1.5);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1.2);
+    }
   }
 }
 

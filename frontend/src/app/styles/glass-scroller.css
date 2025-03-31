@@ -1,0 +1,58 @@
+/* Glass Scroller Styles */
+
+/* Hide scrollbar for browsers that support ::-webkit-scrollbar */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Base glass effect */
+.glass-effect {
+  background: rgba(10, 10, 10, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Animation for fade-in effect */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.glass-scroller-container {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Smooth scrolling for all scrollable elements */
+.glass-scroller {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar track for dark mode */
+.glass-scroller::-webkit-scrollbar-track {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+/* Custom scrollbar thumb for dark mode */
+.glass-scroller::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.glass-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Firefox scrollbar styles */
+.glass-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05);
+}

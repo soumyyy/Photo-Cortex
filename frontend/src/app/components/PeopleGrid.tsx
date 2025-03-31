@@ -53,8 +53,9 @@ export default function PeopleGrid() {
 
   // Helper function to get face image URL
   const getFaceImageUrl = (filename: string) => {
-    const encodedFilename = encodeURIComponent(filename);
-    return `${config.API_BASE_URL}/image/${encodedFilename}`;
+    // Remove any leading slashes
+    const cleanFilename = filename.replace(/^\/+/, '');
+    return `${config.API_BASE_URL}/${cleanFilename}`;
   };
 
   if (loading) {
@@ -66,6 +67,15 @@ export default function PeopleGrid() {
     );
   }
 
+  if (!uniqueFaces || uniqueFaces.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+        <p className="text-lg text-white/70">No faces detected yet</p>
+        <p className="text-sm text-white/50">Try analyzing some photos in the Photos tab first</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] p-4 sm:p-6 custom-scrollbar">
       {/* Grid of unique faces */}
@@ -73,19 +83,21 @@ export default function PeopleGrid() {
         {uniqueFaces.map((person) => (
           <div
             key={person.id}
-            className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] aspect-square transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
+            className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
             onClick={() => setSelectedPerson(person)}
           >
             {/* Show the first face cutout for this person */}
-            <div className="aspect-square relative">
-              <Image
-                src={getFaceImageUrl(person.face_images[0])}
-                alt={`Person ${person.id}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                unoptimized={true}
-              />
+            <div className="relative w-full pb-[100%]">
+              <div className="absolute inset-0">
+                <Image
+                  src={getFaceImageUrl(person.face_images[0])}
+                  alt={`Person ${person.id}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  unoptimized={true}
+                />
+              </div>
             </div>
             
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">

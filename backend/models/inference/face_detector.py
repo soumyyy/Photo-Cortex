@@ -32,7 +32,7 @@ class FaceDetector:
             self.similarity_threshold = 0.5
             
             # Create faces directory
-            self.faces_dir = Path("./images/faces")
+            self.faces_dir = Path("./image/faces")
             self.faces_dir.mkdir(exist_ok=True, parents=True)
             
             logger.info("Face detector initialized successfully")
@@ -201,11 +201,14 @@ class FaceDetector:
                     gender = "male" if hasattr(face, 'gender') and face.gender == 1 else "female"
                     eye_status = self.calculate_eye_status(face.kps) if hasattr(face, 'kps') else {"status": "unknown", "left_ear": 0.0, "right_ear": 0.0}
                     
+                    # Update face path to use image/faces
+                    face_relative_path = f"image/faces/{face_filename}"
+                    
                     detection = {
                         'bbox': bbox,
                         'score': float(face.det_score),
                         'landmarks': face.kps.tolist() if hasattr(face, 'kps') else None,
-                        'face_image': f"faces/{face_filename}",
+                        'face_image': face_relative_path,
                         'attributes': {
                             'age': age_category,
                             'gender': gender,
@@ -221,13 +224,11 @@ class FaceDetector:
                     detections.append(detection)
                     embeddings.append(embedding.tolist())
                     
-                    # Update face database
+                    # Update face database with correct path
                     if image_name:
-                        self._update_face_db(embedding, image_name, f"faces/{face_filename}")
+                        self._update_face_db(embedding, image_name, face_relative_path)
                 except Exception as e:
                     logger.error(f"Error processing face {idx}: {str(e)}")
-                    continue
-            
             return {
                 "faces": detections,
                 "embeddings": embeddings

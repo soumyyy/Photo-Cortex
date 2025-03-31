@@ -4062,3 +4062,6 @@ ValueError: I/O operation on closed file.
 2025-03-10 01:11:37,237 - models.inference.text_recognizer - WARNING - No text regions detected with EAST
 2025-03-10 01:18:14,723 - main - INFO - PhotoCortex models loaded and ready
 2025-03-10 01:41:57,817 - main - INFO - PhotoCortex models loaded and ready
+2025-04-01 01:34:00,280 - main - INFO - PhotoCortex models loaded and ready
+2025-04-01 02:09:02,688 - main - INFO - PhotoCortex models loaded and ready
+2025-04-01 02:12:40,267 - main - INFO - PhotoCortex models loaded and ready

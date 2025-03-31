@@ -38,7 +38,7 @@ interface TextBlock {
   bbox: [number, number, number, number]; // [x_min, y_min, x_max, y_max]
 }
 
-export default function ImageGrid({ images }: ImageGridProps): React.ReactElement {
+const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
   const [selectedImage, setSelectedImage] = useState<ImageAnalysis | null>(null);
   const [selectedFace, setSelectedFace] = useState<Face | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -234,6 +234,64 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
     );
   };
 
+  const renderFaceOverlays = (image: ImageAnalysis) => {
+    if (!showFaceOverlay || !image.faces || !imageRef.current) {
+      return null;
+    }
+
+    console.log('Face data:', image.faces);
+
+    const imageRect = imageRef.current.getBoundingClientRect();
+    const scaleX = imageRect.width / imageRef.current.naturalWidth;
+    const scaleY = imageRect.height / imageRef.current.naturalHeight;
+
+    return (
+      <div className="highlight-container">
+        {image.faces.map((face, index) => {
+          // bbox comes as [x1, y1, x2, y2] (top-left and bottom-right coordinates)
+          const [x1, y1, x2, y2] = face.bbox;
+          console.log(`Face ${index}:`, { bbox: face.bbox, attributes: face.attributes });
+          
+          const style = {
+            left: `${x1 * scaleX}px`,
+            top: `${y1 * scaleY}px`,
+            width: `${(x2 - x1) * scaleX}px`,
+            height: `${(y2 - y1) * scaleY}px`,
+            animationDelay: `${index * 0.05}s`,
+            borderColor: selectedFace === face ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.5)',
+            backgroundColor: selectedFace === face ? 'rgba(0, 255, 0, 0.2)' : 'rgba(0, 255, 0, 0.1)',
+          };
+
+          return (
+            <div
+              key={index}
+              className={`face-region-highlight group ${selectedFace === face ? 'selected' : ''}`}
+              style={style}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Face clicked:', face);
+                // Update selected face and selected image
+                setSelectedFace(face);
+                setSelectedImage(image);
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    console.log('Selected face changed:', selectedFace);
+  }, [selectedFace]);
+
+  useEffect(() => {
+    if (selectedImage) {
+      console.log('Selected image faces:', selectedImage.faces);
+    }
+    setSelectedFace(null);  // Reset selected face when image changes
+  }, [selectedImage]);
+
   const renderImagePreview = (image: ImageAnalysis) => (
     <div className="relative w-full h-full">
       <Image 
@@ -348,16 +406,18 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
                 {/* Left side - Image */}
                 <div className="flex-1 relative flex flex-col p-4">
                   {/* Top Bar with Glass Effect */}
-                  <div className="flex items-center justify-between mb-4 p-3 glass-panel">
+                  <div className="flex items-center justify-between mb-4 p-3 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
                     <div className="flex items-center gap-3">
                       <h2 className="text-lg font-medium text-white/90 truncate">{selectedImage.filename}</h2>
                       {selectedImage.scene_classification && (
-                        <span className="px-2 py-1 rounded-lg text-xs bg-white/[0.05] text-white/70">
+                        <span className={`px-2 py-1 rounded-lg text-xs ${getSceneTypeColor(selectedImage.scene_classification.scene_type)}`}>
                           {selectedImage.scene_classification.scene_type}
                         </span>
                       )}
                     </div>
-                    {renderImageActions(selectedImage)}
+                    <div className="flex items-center gap-2">
+                      {renderImageActions(selectedImage)}
+                    </div>
                   </div>
                   
                   {/* Image Container */}
@@ -381,6 +441,7 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
                           unoptimized={true}
                         />
                         {renderTextHighlights(selectedImage)}
+                        {renderFaceOverlays(selectedImage)}
                       </div>
                     </div>
                   </div>
@@ -426,7 +487,9 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
                         {selectedImage.faces.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-white/70">Faces Detected</span>
+                              <span className="text-sm text-white/70">
+                                Faces Detected ({selectedImage.faces.length})
+                              </span>
                               <button
                                 onClick={() => setShowFaceOverlay(!showFaceOverlay)}
                                 className={`text-xs px-2 py-1 rounded-md transition-all ${
@@ -445,24 +508,28 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
                                 <div className="space-y-2 animate-fadeIn">
                                   <div className="flex items-center justify-between text-white/80">
                                     <span>Age</span>
-                                    <span>{selectedFace.attributes.age}</span>
+                                    <span className="capitalize">{selectedFace.attributes.age || 'Unknown'}</span>
                                   </div>
                                   <div className="flex items-center justify-between text-white/80">
                                     <span>Gender</span>
-                                    <span>{selectedFace.attributes.gender}</span>
+                                    <span className="capitalize">{selectedFace.attributes.gender || 'Unknown'}</span>
                                   </div>
                                   <div className="flex items-center justify-between text-white/80">
                                     <span>Smile</span>
-                                    <span>{Math.round(selectedFace.attributes.smile_intensity * 100)}%</span>
+                                    <span>
+                                      {selectedFace.attributes.smile_intensity !== undefined 
+                                        ? `${Math.round(selectedFace.attributes.smile_intensity * 100)}%` 
+                                        : 'Unknown'}
+                                    </span>
                                   </div>
                                   <div className="flex items-center justify-between text-white/80">
                                     <span>Eyes</span>
-                                    <span>{selectedFace.attributes.eye_status}</span>
+                                    <span className="capitalize">{selectedFace.attributes.eye_status || 'Unknown'}</span>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="h-full flex items-center justify-center text-white/40 text-sm">
-                                  Hover over a face to see details
+                                  {showFaceOverlay ? 'Click on a face to see details' : 'Enable face detection to see details'}
                                 </div>
                               )}
                             </div>
@@ -660,3 +727,5 @@ export default function ImageGrid({ images }: ImageGridProps): React.ReactElemen
     </div>
   );
 }
+
+export default ImageGrid;
