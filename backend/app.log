@@ -4065,3 +4065,5 @@ ValueError: I/O operation on closed file.
 2025-04-01 01:34:00,280 - main - INFO - PhotoCortex models loaded and ready
 2025-04-01 02:09:02,688 - main - INFO - PhotoCortex models loaded and ready
 2025-04-01 02:12:40,267 - main - INFO - PhotoCortex models loaded and ready
+2025-04-01 02:23:03,779 - main - INFO - PhotoCortex models loaded and ready
+2025-04-01 02:25:36,400 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration

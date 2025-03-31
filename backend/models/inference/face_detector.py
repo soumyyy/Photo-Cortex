@@ -278,12 +278,15 @@ class FaceDetector:
         """Update face database with new embedding."""
         try:
             if new_embedding.shape[0] != 512:
+                logger.warning(f"Invalid embedding shape: {new_embedding.shape}")
                 return
                 
             new_embedding_bytes = new_embedding.tobytes()
             found_match = False
             best_similarity = 0
             best_embedding = None
+            
+            logger.debug(f"Processing face from {image_name}")
             
             for existing_embedding, data in self.face_db.items():
                 try:
@@ -301,6 +304,7 @@ class FaceDetector:
                     continue
             
             if best_similarity > self.similarity_threshold:
+                logger.debug(f"Found match with similarity {best_similarity:.3f}")
                 if 'images' not in self.face_db[best_embedding]:
                     self.face_db[best_embedding]['images'] = set()
                 if 'face_images' not in self.face_db[best_embedding]:
@@ -310,13 +314,14 @@ class FaceDetector:
                 found_match = True
             
             if not found_match:
+                logger.debug(f"Creating new face group for {image_name}")
                 self.face_db[new_embedding_bytes] = {
                     'images': {image_name},
                     'face_images': {face_image}
                 }
                 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error updating face database: {e}")
 
     def _compute_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Compute cosine similarity between two embeddings."""
@@ -344,14 +349,17 @@ class FaceDetector:
             - face_images: list of cropped face image filenames
         """
         try:
+            logger.info(f"Face database size: {len(self.face_db)}")
             unique_faces = []
             for idx, (_, data) in enumerate(self.face_db.items()):
+                logger.info(f"Face group {idx}: {len(data['images'])} images, {len(data['face_images'])} face cutouts")
                 unique_faces.append({
                     'id': idx,
                     'images': list(data['images']),
                     'face_images': list(data['face_images'])
                 })
+            logger.info(f"Returning {len(unique_faces)} unique faces")
             return unique_faces
         except Exception as e:
-            logger.error(f"Error getting unique faces: {str(e)}")
+            logger.error(f"Error getting unique faces: {e}")
             return []
