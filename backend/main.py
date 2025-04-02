@@ -534,7 +534,7 @@ async def analyze_face(image_name: str):
 @app.post("/scan-text")
 async def scan_text(file_data: dict):
     """
-    Scan text in an image using the PhotoOCR class.
+    Scan text in an image using the TextRecognizer class.
     """
     try:
         filename = file_data.get("filename")
@@ -547,34 +547,23 @@ async def scan_text(file_data: dict):
         if not image_path.exists():
             raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
             
-        # Read the image
-        image = cv2.imread(str(image_path))
-        if image is None:
-            raise HTTPException(status_code=400, detail=f"Could not read image: {filename}")
-            
-        # Initialize PhotoOCR if not already initialized
-        if not hasattr(analyzer, "photo_ocr"):
-            from models.inference.text_recognizer import PhotoOCR
+        # Initialize TextRecognizer if not already initialized
+        if not hasattr(analyzer, "text_recognizer"):
+            from models.inference.text_recognizer import TextRecognizer
             try:
-                analyzer.photo_ocr = PhotoOCR()
+                analyzer.text_recognizer = TextRecognizer()
             except Exception as e:
-                logger.error(f"Failed to initialize PhotoOCR: {str(e)}")
+                logger.error(f"Failed to initialize TextRecognizer: {str(e)}")
                 raise HTTPException(status_code=500, detail="Failed to initialize text recognition model")
             
         # Process the image
         try:
             start_time = time.time()
-            result = analyzer.photo_ocr.process_image(image)
+            result = analyzer.text_recognizer.detect_text(str(image_path))
             processing_time = time.time() - start_time
             
             # Add processing time to the result
-            if isinstance(result, dict):
-                result['processing_time'] = processing_time
-            else:
-                result = {
-                    'text_blocks': result,
-                    'processing_time': processing_time
-                }
+            result['processing_time'] = processing_time
             
             return result
         except Exception as e:

@@ -314,46 +314,46 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
     </div>
   );
 
-  const renderImageActions = (image: ImageAnalysis) => {
-    const hasResults = Boolean(scanResults[image.filename]);
-    const isShowingText = showTextOverlays[image.filename];
+  // const renderImageActions = (image: ImageAnalysis) => {
+  //   const hasResults = Boolean(scanResults[image.filename]);
+  //   const isShowingText = showTextOverlays[image.filename];
     
-    return (
-      <button
-        className={`scan-button ${isShowingText ? 'active' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (hasResults) {
-            // Toggle highlights with smooth transition
-            setShowTextOverlays(prev => ({ ...prev, [image.filename]: !prev[image.filename] }));
-          } else {
-            // Scan if not yet scanned
-            handleScanClick(image);
-          }
-        }}
-        disabled={isScanning === image.filename}
-      >
-        {isScanning === image.filename ? (
-          <>
-            <Spinner className="w-4 h-4" />
-            <span>Scanning...</span>
-          </>
-        ) : (
-          <>
-            <DocumentTextIcon className={`w-4 h-4 transition-transform duration-300 ${isShowingText ? 'rotate-180' : ''}`} />
-            <span>
-              {hasResults
-                ? isShowingText
-                  ? 'Hide Text'
-                  : 'Show Text'
-                : 'Scan Text'
-              }
-            </span>
-          </>
-        )}
-      </button>
-    );
-  };
+  //   return (
+  //     <button
+  //       className={`scan-button ${isShowingText ? 'active' : ''}`}
+  //       onClick={(e) => {
+  //         e.stopPropagation();
+  //         if (hasResults) {
+  //           // Toggle highlights with smooth transition
+  //           setShowTextOverlays(prev => ({ ...prev, [image.filename]: !prev[image.filename] }));
+  //         } else {
+  //           // Scan if not yet scanned
+  //           handleScanClick(image);
+  //         }
+  //       }}
+  //       disabled={isScanning === image.filename}
+  //     >
+  //       {isScanning === image.filename ? (
+  //         <>
+  //           <Spinner className="w-4 h-4" />
+  //           <span>Scanning...</span>
+  //         </>
+  //       ) : (
+  //         <>
+  //           <DocumentTextIcon className={`w-4 h-4 transition-transform duration-300 ${isShowingText ? 'rotate-180' : ''}`} />
+  //           <span>
+  //             {hasResults
+  //               ? isShowingText
+  //                 ? 'Hide Text'
+  //                 : 'Show Text'
+  //               : 'Scan Text'
+  //             }
+  //           </span>
+  //         </>
+  //       )}
+  //     </button>
+  //   );
+  // };
 
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-8 sm:px-6 sm:py-12">
@@ -406,7 +406,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
                 {/* Left side - Image */}
                 <div className="flex-1 relative flex flex-col p-4">
                   {/* Top Bar with Glass Effect */}
-                  <div className="flex items-center justify-between mb-4 p-3 bg-black/40 backdrop-blur-md rounded-lg border border-white/10">
+                  <div className="flex items-center justify-between mb-4 p-3 bg-[#0a0a0a]/80 rounded-lg border border-white/[0.05]">
                     <div className="flex items-center gap-3">
                       <h2 className="text-lg font-medium text-white/90 truncate">{selectedImage.filename}</h2>
                       {selectedImage.scene_classification && (
@@ -416,12 +416,12 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {renderImageActions(selectedImage)}
+                      {/* {renderImageActions(selectedImage)} */}
                     </div>
                   </div>
                   
                   {/* Image Container */}
-                  <div className="flex-1 relative flex items-center justify-center glass-panel p-4">
+                  <div className=" bg-[#0a0a0a] flex-1 relative flex items-center justify-center glass-panel p-4">
                     <div 
                       ref={previewRef} 
                       className="relative w-auto h-auto max-w-full"
@@ -503,7 +503,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
                             </div>
                             
                             {/* Fixed height container for face attributes */}
-                            <div className="h-[140px] bg-white/5 rounded-lg p-3 text-sm">
+                            {/* <div className="h-[140px] bg-white/5 rounded-lg p-3 text-sm">
                               {selectedFace && selectedFace.attributes ? (
                                 <div className="space-y-2 animate-fadeIn">
                                   <div className="flex items-center justify-between text-white/80">
@@ -532,7 +532,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
                                   {showFaceOverlay ? 'Click on a face to see details' : 'Enable face detection to see details'}
                                 </div>
                               )}
-                            </div>
+                            </div> */}
                           </div>
                         )}
 
