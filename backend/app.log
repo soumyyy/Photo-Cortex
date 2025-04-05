@@ -1,0 +1,6 @@
+2025-04-06 00:43:05,403 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 00:43:39,373 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 00:43:39,476 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 00:43:39,495 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 00:43:39,532 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 00:43:39,533 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
