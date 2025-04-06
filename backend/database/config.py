@@ -17,11 +17,17 @@ else:
 
 # Async engine for FastAPI
 async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
-async_session = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+async_session_factory = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # Sync engine for Alembic
 sync_engine = create_engine(SYNC_DATABASE_URL)
 
-async def get_async_session() -> AsyncSession:
-    async with async_session() as session:
+async def get_async_session():
+    """FastAPI dependency that yields a session"""
+    async with async_session_factory() as session:
         yield session
+
+async def get_db():
+    """Get a regular async session (not a FastAPI dependency)"""
+    async with async_session_factory() as session:
+        return session

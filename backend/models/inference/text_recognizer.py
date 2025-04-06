@@ -4,7 +4,7 @@ import logging
 import cv2
 import numpy as np
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 # Set the environment variable to disable the MPS memory upper limit.
 # Use with caution—this may lead to system instability.
@@ -35,17 +35,22 @@ class TextRecognizer:
             self._reader = None
             raise
 
-    def detect_text(self, image_path: str) -> Dict:
+    def detect_text(self, image_input: Union[str, Path, np.ndarray]) -> Dict:
         """Detect and recognize text in an image using EasyOCR."""
         try:
             # Ensure the reader is initialized (using GPU by default).
             if self._reader is None:
                 self.initialize(use_gpu=True)
 
-            # Read the image using OpenCV.
-            image = cv2.imread(str(image_path))
-            if image is None:
-                raise ValueError(f"Could not read image at {image_path}")
+            # Handle different input types
+            if isinstance(image_input, (str, Path)):
+                image = cv2.imread(str(image_input))
+                if image is None:
+                    raise ValueError(f"Could not read image at {image_input}")
+            elif isinstance(image_input, np.ndarray):
+                image = image_input
+            else:
+                raise ValueError(f"Unsupported image input type: {type(image_input)}")
 
             # Run OCR synchronously.
             results = self._reader.readtext(image)
@@ -53,61 +58,46 @@ class TextRecognizer:
             # Process results into a structured dictionary.
             text_blocks = []
             raw_text = []
-            for bbox, text, conf in results:
+            for detection in results:
+                bbox = detection[0]  # List of points [[x1,y1], [x2,y1], [x2,y2], [x1,y2]]
+                text = detection[1]
+                conf = float(detection[2])  # Ensure confidence is float
+                
+                # Convert numpy arrays to lists for JSON serialization
+                bbox = [[float(x) for x in point] for point in bbox]
+                
                 text_blocks.append({
                     'text': text,
-                    'confidence': float(conf),
-                    'bbox': bbox
+                    'confidence': conf,
+                    'bounding_box': bbox
                 })
                 raw_text.append(text)
 
+            # Calculate average confidence if there are results
+            avg_confidence = sum(conf for _, _, conf in results) / len(results) if results else 0.0
+
             return {
-                'text_detected': bool(text_blocks),
+                'text_detected': bool(results),
                 'text_blocks': text_blocks,
-                'raw_text': ' '.join(raw_text)
+                'raw_text': ' '.join(raw_text),
+                'total_confidence': avg_confidence
             }
 
         except RuntimeError as e:
-            # Check for the MPS out-of-memory error.
-            if "MPS backend out of memory" in str(e):
-                self.logger.error("MPS backend out of memory, falling back to CPU mode.", exc_info=True)
-                # Reset reader and reinitialize in CPU mode.
-                self._reader = None
-                self.initialize(use_gpu=False)
-                try:
-                    results = self._reader.readtext(image)
-                    text_blocks = []
-                    raw_text = []
-                    for bbox, text, conf in results:
-                        text_blocks.append({
-                            'text': text,
-                            'confidence': float(conf),
-                            'bbox': bbox
-                        })
-                        raw_text.append(text)
-                    return {
-                        'text_detected': bool(text_blocks),
-                        'text_blocks': text_blocks,
-                        'raw_text': ' '.join(raw_text)
-                    }
-                except Exception as e2:
-                    self.logger.error("Error after falling back to CPU: %s", str(e2), exc_info=True)
-                    return {
-                        'text_detected': False,
-                        'text_blocks': [],
-                        'raw_text': '',
-                        'error': str(e2)
-                    }
-            else:
-                self.logger.error("Runtime error during text detection: %s", str(e), exc_info=True)
+            # Handle specific runtime errors (like CUDA out of memory)
+            try:
+                self.initialize(use_gpu=False)  # Reinitialize without GPU
+                return self.detect_text(image_input)  # Retry detection
+            except Exception as e2:
+                self.logger.error("Failed to recover from runtime error: %s", str(e2))
                 return {
                     'text_detected': False,
                     'text_blocks': [],
                     'raw_text': '',
-                    'error': str(e)
+                    'error': str(e2)
                 }
         except Exception as e:
-            self.logger.error("Error in text detection for %s: %s", image_path, str(e), exc_info=True)
+            self.logger.error("Error in text detection for %s: %s", image_input, str(e), exc_info=True)
             return {
                 'text_detected': False,
                 'text_blocks': [],

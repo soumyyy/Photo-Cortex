@@ -4,3 +4,567 @@
 2025-04-06 00:43:39,495 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
 2025-04-06 00:43:39,532 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
 2025-04-06 00:43:39,533 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 01:58:34,109 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 02:10:19,306 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 02:21:05,579 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 02:31:11,950 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 02:34:52,068 - main - ERROR - Error processing upload: object dict can't be used in 'await' expression
+2025-04-06 06:44:44,248 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 06:45:03,703 - main - ERROR - Error processing upload: object dict can't be used in 'await' expression
+2025-04-06 06:45:27,385 - main - ERROR - Error processing upload: object dict can't be used in 'await' expression
+2025-04-06 06:46:40,839 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 06:46:59,081 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 06:47:12,587 - main - ERROR - Error processing upload: object dict can't be used in 'await' expression
+2025-04-06 06:49:51,327 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 06:50:03,111 - main - ERROR - Error processing upload: object dict can't be used in 'await' expression
+2025-04-06 10:58:16,598 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 10:58:23,984 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:01:21,618 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:01:37,480 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:03:47,558 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:04:01,357 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:04:02,516 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:04:06,410 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:04:51,700 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:05:10,823 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:11:51,738 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:21:35,079 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:21:39,974 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:22:13,593 - main - ERROR - Error processing upload: 'ImageAnalyzer' object has no attribute 'analyze_image_with_session'
+2025-04-06 11:25:35,055 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:26:01,618 - models.inference.text_recognizer - ERROR - Error in text detection for [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]: Could not read image at [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]
+Traceback (most recent call last):
+  File "/Users/soumya/Desktop/Projects/cortexV2/backend/models/inference/text_recognizer.py", line 48, in detect_text
+    raise ValueError(f"Could not read image at {image_path}")
+ValueError: Could not read image at [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]
+2025-04-06 11:26:04,075 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: 'ImageAnalyzer' object has no attribute 'clip_encoder'
+2025-04-06 11:26:04,076 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:27:24,139 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:27:27,546 - models.inference.text_recognizer - ERROR - Error in text detection for [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]: Could not read image at [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]
+Traceback (most recent call last):
+  File "/Users/soumya/Desktop/Projects/cortexV2/backend/models/inference/text_recognizer.py", line 48, in detect_text
+    raise ValueError(f"Could not read image at {image_path}")
+ValueError: Could not read image at [[[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ ...
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]
+
+ [[23 23 23]
+  [23 23 23]
+  [23 23 23]
+  ...
+  [23 23 23]
+  [23 23 23]
+  [23 23 23]]]
+2025-04-06 11:27:30,047 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: 'ImageAnalyzer' object has no attribute 'clip_encoder'
+2025-04-06 11:27:30,048 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:29:14,116 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:29:49,088 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: 'ImageAnalyzer' object has no attribute 'clip_encoder'
+2025-04-06 11:29:49,090 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:32:06,583 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:32:31,112 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:32:39,451 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: name 'Image' is not defined
+2025-04-06 11:32:39,456 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:33:32,627 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:33:53,659 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:34:03,638 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 11:34:03,638 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:34:03,678 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 11:34:03,678 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:34:03,716 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 11:34:03,716 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:34:03,744 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 11:34:03,747 - sqlalchemy.engine.Engine - INFO - INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id
+2025-04-06 11:34:03,747 - sqlalchemy.engine.Engine - INFO - [generated in 0.00037s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 4, 3, 747282), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')
+2025-04-06 11:34:03,863 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: list indices must be integers or slices, not str
+2025-04-06 11:34:03,863 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 11:34:03,871 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:36:30,532 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:37:16,854 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 11:37:16,856 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:37:16,892 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 11:37:16,892 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:37:16,929 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 11:37:16,930 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:37:16,957 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 11:37:16,961 - sqlalchemy.engine.Engine - INFO - INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id
+2025-04-06 11:37:16,961 - sqlalchemy.engine.Engine - INFO - [generated in 0.00047s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 7, 16, 961363), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')
+2025-04-06 11:37:17,063 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: list indices must be integers or slices, not str
+2025-04-06 11:37:17,064 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 11:37:17,072 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:38:42,397 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:40:46,262 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:40:55,821 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:41:30,064 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 11:41:30,064 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:41:30,103 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 11:41:30,103 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:41:30,139 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 11:41:30,139 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:41:30,167 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 11:41:30,169 - sqlalchemy.engine.Engine - INFO - INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id
+2025-04-06 11:41:30,169 - sqlalchemy.engine.Engine - INFO - [generated in 0.00021s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 11, 30, 168998), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')
+2025-04-06 11:41:30,511 - sqlalchemy.engine.Engine - INFO - INSERT INTO object_detections (image_id, label, confidence, bounding_box) VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT, $4::JSON) RETURNING object_detections.id
+2025-04-06 11:41:30,511 - sqlalchemy.engine.Engine - INFO - [generated in 0.00016s] (3, 'laptop', 0.44546955823898315, '[2.9540417194366455, 4.920621395111084, 867.1661376953125, 1367.984130859375]')
+2025-04-06 11:41:30,534 - sqlalchemy.engine.Engine - INFO - INSERT INTO scene_classifications (image_id, scene_type, confidence) VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT) RETURNING scene_classifications.id
+2025-04-06 11:41:30,534 - sqlalchemy.engine.Engine - INFO - [generated in 0.00017s] (3, 'Receipts', 0.7613733136590254)
+2025-04-06 11:41:30,556 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 11:41:30,568 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: (builtins.TypeError) Object of type int64 is not JSON serializable
+[SQL: INSERT INTO text_detections (image_id, text, confidence, bounding_box) SELECT p0::INTEGER, p1::VARCHAR, p2::FLOAT, p3::JSON FROM (VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT, $4::JSON)) AS imp_sen(p0, p1, p2, p3, sen_counter) ORDER BY sen_counter RETURNING text_detections.id, text_detections.id AS id__1]
+[parameters: [{'text': 'spatial_ref_sys', 'confidence': 0.9805382765953811, 'image_id': 3, 'bounding_box': [[137, 63], [235, 63], [235, 79], [137, 79]]}, {'text': 'srid', 'confidence': 0.9952616691589355, 'image_id': 3, 'bounding_box': [[161, 97], [187, 97], [187, 111], [161, 111]]}, {'text': 'int?', 'confidence': 0.41680219769477844, 'image_id': 3, 'bounding_box': [[317, 97], [345, 97], [345, 109], [317, 109]]}, {'text': 'auth_name', 'confidence': 0.9904090190371562, 'image_id': 3, 'bounding_box': [[137, 133], [205, 133], [205, 147], [137, 147]]}, {'text': 'anchar', 'confidence': 0.2851727487995466, 'image_id': 3, 'bounding_box': [[298, 134], [342, 134], [342, 142], [298, 142]]}, {'text': 'auth', 'confidence': 0.9998040199279785, 'image_id': 3, 'bounding_box': [[137, 169], [167, 169], [167, 183], [137, 183]]}, {'text': 'inta', 'confidence': 0.35468360781669617, 'image_id': 3, 'bounding_box': [[317, 167], [345, 167], [345, 181], [317, 181]]}, {'text': 'srtext', 'confidence': 0.9897356494075398, 'image_id': 3, 'bounding_box': [[137, 205], [175, 205], [175, 217], [137, 217]]}, {'text': 'varchar', 'confidence': 0.7940804528234653, 'image_id': 3, 'bounding_box': [[298, 204], [342, 204], [342, 212], [298, 212]]}, {'text': 'proj4text', 'confidence': 0.9774993145212105, 'image_id': 3, 'bounding_box': [[136, 237], [195, 237], [195, 255], [136, 255]]}, {'text': 'anchar', 'confidence': 0.342758615450552, 'image_id': 3, 'bounding_box': [[298, 240], [342, 240], [342, 248], [298, 248]]}, {'text': 'alembic_version', 'confidence': 0.9986103076165477, 'image_id': 3, 'bounding_box': [[137, 295], [243, 295], [243, 311], [137, 311]]}, {'text': 'version', 'confidence': 0.9574316126682593, 'image_id': 3, 'bounding_box': [[161, 331], [207, 331], [207, 345], [161, 345]]}, {'text': 'num', 'confidence': 0.675126775661892, 'image_id': 3, 'bounding_box': [[212, 334], [238, 334], [238, 342], [212, 342]]}, {'text': 'varcnar', 'confidence': 0.27928985521865274, 'image_id': 3, 'bounding_box': [[298, 332], [342, 332], [342, 340], [298, 340]]}, {'text': 'face_detections', 'confidence': 0.9993765496867596, 'image_id': 3, 'bounding_box': [[137, 399], [243, 399], [243, 415], [137, 415]]}, {'text': 'inta', 'confidence': 0.6826843023300171, 'image_id': 3, 'bounding_box': [[317, 435], [345, 435], [345, 447], [317, 447]]}, {'text': 'face_identities', 'confidence': 0.9828634711342126, 'image_id': 3, 'bounding_box': [[475, 431], [571, 431], [571, 447], [475, 447]]}, {'text': 'image_id', 'confidence': 0.9982209635503337, 'image_id': 3, 'bounding_box': [[135, 469], [193, 469], [193, 485], [135, 485]]}, {'text': 'inta', 'confidence': 0.3392619788646698, 'image_id': 3, 'bounding_box': [[317, 469], [345, 469], [345, 483], [317, 483]]}, {'text': 'Anta', 'confidence': 0.10003986954689026, 'image_id': 3, 'bounding_box': [[654, 468], [680, 468], [680, 476], [654, 476]]}, {'text': 'embedding', 'confidence': 0.9990403733800486, 'image_id': 3, 'bounding_box': [[136, 503], [205, 503], [205, 521], [136, 521]]}, {'text': 'vector', 'confidence': 0.5661964026210532, 'image_id': 3, 'bounding_box': [[304, 506], [342, 506], [342, 514], [304, 514]]}, {'text': 'Jabel', 'confidence': 0.37667074969932124, 'image_id': 3, 'bounding_box': [[473, 503], [507, 503], [507, 517], [473, 517]]}, {'text': 'varcham', 'confidence': 0.13663989484654884, 'image_id': 3, 'bounding_box': [[636, 504], [678, 504], [678, 512], [636, 512]]}, {'text': 'bounding_', 'confidence': 0.9987408726780148, 'image_id': 3, 'bounding_box': [[137, 541], [195, 541], [195, 557], [137, 557]]}, {'text': 'box', 'confidence': 0.925834059715271, 'image_id': 3, 'bounding_box': [[199, 541], [225, 541], [225, 555], [199, 555]]}, {'text': 'json', 'confidence': 0.6407649517059326, 'image_id': 3, 'bounding_box': [[315, 541], [345, 541], [345, 555], [315, 555]]}, {'text': 'reterence', 'confidence': 0.8895920332461951, 'image_id': 3, 'bounding_box': [[473, 539], [533, 539], [533, 551], [473, 551]]}, {'text': 'embedding', 'confidence': 0.8034857103823143, 'image_id': 3, 'bounding_box': [[536, 535], [605, 535], [605, 553], [536, 553]]}, {'text': 'Vectoi', 'confidence': 0.35696125441002685, 'image_id': 3, 'bounding_box': [[642, 540], [678, 540], [678, 548], [642, 548]]}, {'text': 'andmarks', 'confidence': 0.9991685945241018, 'image_id': 3, 'bounding_box': [[135, 577], [201, 577], [201, 591], [135, 591]]}, {'text': 'Ason', 'confidence': 0.10991623252630234, 'image_id': 3, 'bounding_box': [[316, 578], [342, 578], [342, 586], [316, 586]]}, {'text': 'similarity_score', 'confidence': 0.9872178531823766, 'image_id': 3, 'bounding_box': [[136, 609], [231, 609], [231, 627], [136, 627]]}, {'text': 'float8', 'confidence': 0.7312305996729477, 'image_id': 3, 'bounding_box': [[305, 611], [345, 611], [345, 625], [305, 625]]}, {'text': 'identity_id', 'confidence': 0.9280563357860252, 'image_id': 3, 'bounding_box': [[135, 647], [203, 647], [203, 661], [135, 661]]}, {'text': 'inta', 'confidence': 0.44293665885925293, 'image_id': 3, 'bounding_box': [[317, 647], [345, 647], [345, 659], [317, 659]]}, {'text': 'object_detections', 'confidence': 0.9913021541944773, 'image_id': 3, 'bounding_box': [[137, 697], [257, 697], [257, 713], [137, 713]]}, {'text': 'Inta', 'confidence': 0.2885529696941376, 'image_id': 3, 'bounding_box': [[317, 731], [345, 731], [345, 745], [317, 745]]}, {'text': 'images', 'confidence': 0.9999360511173421, 'image_id': 3, 'bounding_box': [[472, 752], [523, 752], [523, 772], [472, 772]]}, {'text': 'image_id', 'confidence': 0.9908581733824683, 'image_id': 3, 'bounding_box': [[136, 766], [193, 766], [193, 784], [136, 784]]}, {'text': 'intz', 'confidence': 0.4017617106437683, 'image_id': 3, 'bounding_box': [[317, 767], [345, 767], [345, 779], [317, 779]]}, {'text': 'int4', 'confidence': 0.8654557466506958, 'image_id': 3, 'bounding_box': [[653, 787], [683, 787], [683, 801], [653, 801]]}, {'text': 'label', 'confidence': 0.8560024878915956, 'image_id': 3, 'bounding_box': [[135, 803], [169, 803], [169, 817], [135, 817]]}, {'text': 'Yanchar', 'confidence': 0.15442585923965688, 'image_id': 3, 'bounding_box': [[298, 804], [342, 804], [342, 812], [298, 812]]}, {'text': 'filename', 'confidence': 0.7166968743590272, 'image_id': 3, 'bounding_box': [[493, 823], [547, 823], [547, 837], [493, 837]]}, {'text': 'Tarenai', 'confidence': 0.14636243527484774, 'image_id': 3, 'bounding_box': [[636, 826], [678, 826], [678, 834], [636, 834]]}, {'text': 'confidence', 'confidence': 0.9999134448513938, 'image_id': 3, 'bounding_box': [[137, 837], [205, 837], [205, 853], [137, 853]]}, {'text': 'float8', 'confidence': 0.7819709997661082, 'image_id': 3, 'bounding_box': [[305, 837], [345, 837], [345, 851], [305, 851]]}, {'text': 'created_at', 'confidence': 0.9997027689149414, 'image_id': 3, 'bounding_box': [[473, 859], [541, 859], [541, 873], [473, 873]]}, {'text': 'timestamp', 'confidence': 0.9939063048678098, 'image_id': 3, 'bounding_box': [[623, 859], [683, 859], [683, 873], [623, 873]]}, {'text': 'bounding', 'confidence': 0.8278173914303667, 'image_id': 3, 'bounding_box': [[136, 871], [195, 871], [195, 889], [136, 889]]}, {'text': 'box', 'confidence': 0.9990144148880267, 'image_id': 3, 'bounding_box': [[199, 873], [225, 873], [225, 887], [199, 887]]}, {'text': 'json', 'confidence': 0.8400624990463257, 'image_id': 3, 'bounding_box': [[315, 873], [343, 873], [343, 885], [315, 885]]}, {'text': 'date_taken', 'confidence': 0.9961867683124074, 'image_id': 3, 'bounding_box': [[473, 893], [543, 893], [543, 909], [473, 909]]}, {'text': 'timestamp', 'confidence': 0.7973318351566961, 'image_id': 3, 'bounding_box': [[623, 895], [681, 895], [681, 907], [623, 907]]}, {'text': 'scene_classifications', 'confidence': 0.9994613773869663, 'image_id': 3, 'bounding_box': [[137, 929], [275, 929], [275, 945], [137, 945]]}, {'text': 'camera_make', 'confidence': 0.9640963271546605, 'image_id': 3, 'bounding_box': [[475, 929], [559, 929], [559, 943], [475, 943]]}, {'text': 'Tarcnai', 'confidence': 0.12362047315390091, 'image_id': 3, 'bounding_box': [[636, 932], [678, 932], [678, 940], [636, 940]]}, {'text': 'intz', 'confidence': 0.21534016939292647, 'image_id': 3, 'bounding_box': [[317, 965], [345, 965], [345, 977], [317, 977]]}, {'text': 'camera', 'confidence': 0.9996863788713851, 'image_id': 3, 'bounding_box': [[473, 967], [521, 967], [521, 979], [473, 979]]}, {'text': 'model', 'confidence': 0.9987144964427995, 'image_id': 3, 'bounding_box': [[525, 965], [565, 965], [565, 979], [525, 979]]}, {'text': 'Vacanar', 'confidence': 0.12199849585316061, 'image_id': 3, 'bounding_box': [[636, 966], [678, 966], [678, 974], [636, 974]]}, {'text': 'image_id', 'confidence': 0.9228956156745702, 'image_id': 3, 'bounding_box': [[137, 999], [193, 999], [193, 1015], [137, 1015]]}, {'text': 'intz', 'confidence': 0.3665555715560913, 'image_id': 3, 'bounding_box': [[317, 1001], [345, 1001], [345, 1013], [317, 1013]]}, {'text': 'focal_length', 'confidence': 0.999017153866955, 'image_id': 3, 'bounding_box': [[473, 999], [549, 999], [549, 1017], [473, 1017]]}, {'text': 'floata', 'confidence': 0.8439652689586182, 'image_id': 3, 'bounding_box': [[640, 998], [681, 998], [681, 1012], [640, 1012]]}, {'text': 'scene_type', 'confidence': 0.998953016290593, 'image_id': 3, 'bounding_box': [[137, 1037], [207, 1037], [207, 1051], [137, 1051]]}, {'text': 'varchar', 'confidence': 0.9915619013501972, 'image_id': 3, 'bounding_box': [[297, 1035], [343, 1035], [343, 1047], [297, 1047]]}, {'text': 'exposure_time', 'confidence': 0.9944911842715463, 'image_id': 3, 'bounding_box': [[475, 1035], [563, 1035], [563, 1051], [475, 1051]]}, {'text': 'Tarcnai', 'confidence': 0.1346283064890803, 'image_id': 3, 'bounding_box': [[636, 1038], [678, 1038], [678, 1046], [636, 1046]]}, {'text': 'confidence', 'confidence': 0.9999776076656333, 'image_id': 3, 'bounding_box': [[137, 1071], [205, 1071], [205, 1085], [137, 1085]]}, {'text': 'float8', 'confidence': 0.3408454939455008, 'image_id': 3, 'bounding_box': [[305, 1071], [345, 1071], [345, 1083], [305, 1083]]}, {'text': 'f_number', 'confidence': 0.9996767120247658, 'image_id': 3, 'bounding_box': [[473, 1071], [535, 1071], [535, 1085], [473, 1085]]}, {'text': 'data', 'confidence': 0.48562005162239075, 'image_id': 3, 'bounding_box': [[642, 1072], [680, 1072], [680, 1080], [642, 1080]]}, {'text': 'Iso', 'confidence': 0.05673000230748334, 'image_id': 3, 'bounding_box': [[473, 1107], [495, 1107], [495, 1119], [473, 1119]]}, {'text': 'int4', 'confidence': 0.9582838416099548, 'image_id': 3, 'bounding_box': [[653, 1107], [683, 1107], [683, 1119], [653, 1119]]}, {'text': 'text_detections', 'confidence': 0.9025338607610041, 'image_id': 3, 'bounding_box': [[137, 1131], [241, 1131], [241, 1147], [137, 1147]]}, {'text': 'dimensions', 'confidence': 0.9999028136487614, 'image_id': 3, 'bounding_box': [[473, 1141], [543, 1141], [543, 1155], [473, 1155]]}, {'text': 'Tarcnai', 'confidence': 0.1065474082475756, 'image_id': 3, 'bounding_box': [[636, 1144], [678, 1144], [678, 1152], [636, 1152]]}, {'text': 'inta', 'confidence': 0.8959974050521851, 'image_id': 3, 'bounding_box': [[317, 1165], [345, 1165], [345, 1179], [317, 1179]]}, {'text': 'format', 'confidence': 0.9999773813655035, 'image_id': 3, 'bounding_box': [[473, 1177], [517, 1177], [517, 1191], [473, 1191]]}, {'text': 'Vacanar', 'confidence': 0.1154351799548463, 'image_id': 3, 'bounding_box': [[636, 1178], [678, 1178], [678, 1186], [636, 1186]]}, {'text': 'image_id', 'confidence': 0.9010381291737889, 'image_id': 3, 'bounding_box': [[134, 1200], [193, 1200], [193, 1218], [134, 1218]]}, {'text': 'Intz', 'confidence': 0.4094911217689514, 'image_id': 3, 'bounding_box': [[317, 1201], [345, 1201], [345, 1213], [317, 1213]]}, {'text': 'file', 'confidence': 0.9983832836151123, 'image_id': 3, 'bounding_box': [[473, 1211], [495, 1211], [495, 1227], [473, 1227]]}, {'text': 'size', 'confidence': 0.9974824786186218, 'image_id': 3, 'bounding_box': [[499, 1213], [525, 1213], [525, 1227], [499, 1227]]}, {'text': 'floata', 'confidence': 0.693128755288123, 'image_id': 3, 'bounding_box': [[641, 1211], [681, 1211], [681, 1223], [641, 1223]]}, {'text': 'text', 'confidence': 0.9998291730880737, 'image_id': 3, 'bounding_box': [[137, 1237], [163, 1237], [163, 1251], [137, 1251]]}, {'text': 'varcnar', 'confidence': 0.2998267001263478, 'image_id': 3, 'bounding_box': [[298, 1238], [342, 1238], [342, 1246], [298, 1246]]}, {'text': 'location', 'confidence': 0.9889718860511348, 'image_id': 3, 'bounding_box': [[473, 1247], [525, 1247], [525, 1261], [473, 1261]]}, {'text': 'Geography', 'confidence': 0.345349744690538, 'image_id': 3, 'bounding_box': [[623, 1249], [681, 1249], [681, 1261], [623, 1261]]}, {'text': 'confidence', 'confidence': 0.9998732570522955, 'image_id': 3, 'bounding_box': [[137, 1271], [205, 1271], [205, 1285], [137, 1285]]}, {'text': 'float8', 'confidence': 0.3285495773593654, 'image_id': 3, 'bounding_box': [[305, 1271], [345, 1271], [345, 1285], [305, 1285]]}, {'text': 'embedding', 'confidence': 0.9995429390901442, 'image_id': 3, 'bounding_box': [[473, 1283], [543, 1283], [543, 1299], [473, 1299]]}, {'text': 'vector', 'confidence': 0.2749380770496148, 'image_id': 3, 'bounding_box': [[642, 1284], [680, 1284], [680, 1292], [642, 1292]]}, {'text': 'bounding', 'confidence': 0.7964657508169981, 'image_id': 3, 'bounding_box': [[136, 1305], [195, 1305], [195, 1323], [136, 1323]]}, {'text': 'box', 'confidence': 0.9996642766869263, 'image_id': 3, 'bounding_box': [[199, 1307], [225, 1307], [225, 1321], [199, 1321]]}, {'text': 'Json', 'confidence': 0.9595755934715271, 'image_id': 3, 'bounding_box': [[315, 1307], [345, 1307], [345, 1321], [315, 1321]]}, {'text': 'srid', 'confidence': 0.9493166208267212, 'image_id': 3, 'bounding_box': [[167.25670585375283, 169.33103526837755], [193.8376105968386, 166.4537322194531], [195.74329414624717, 179.66896473162245], [169.1623894031614, 182.5462677805469]]}]]
+2025-04-06 11:41:30,569 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:47:06,768 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:47:46,102 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:48:04,027 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 11:48:04,028 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:48:04,065 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 11:48:04,065 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:48:04,102 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 11:48:04,102 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:48:04,135 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 11:48:04,140 - sqlalchemy.engine.Engine - INFO - INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id
+2025-04-06 11:48:04,140 - sqlalchemy.engine.Engine - INFO - [generated in 0.00038s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 18, 4, 140181), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')
+2025-04-06 11:48:04,513 - sqlalchemy.engine.Engine - INFO - INSERT INTO object_detections (image_id, label, confidence, bounding_box) VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT, $4::JSON) RETURNING object_detections.id
+2025-04-06 11:48:04,513 - sqlalchemy.engine.Engine - INFO - [generated in 0.00021s] (4, 'laptop', 0.44546955823898315, '[2.9540417194366455, 4.920621395111084, 867.1661376953125, 1367.984130859375]')
+2025-04-06 11:48:04,535 - sqlalchemy.engine.Engine - INFO - INSERT INTO scene_classifications (image_id, scene_type, confidence) VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT) RETURNING scene_classifications.id
+2025-04-06 11:48:04,535 - sqlalchemy.engine.Engine - INFO - [generated in 0.00011s] (4, 'Receipts', 0.7613733136590254)
+2025-04-06 11:48:04,555 - sqlalchemy.engine.Engine - INFO - INSERT INTO text_detections (image_id, text, confidence, bounding_box) SELECT p0::INTEGER, p1::VARCHAR, p2::FLOAT, p3::JSON FROM (VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT, $4::JSON, 0), ($5::INTEGER, $6::VARCHAR, $7::FLOAT, $8::JSON, 1), ($9::INTE ... 5887 characters truncated ...  p2, p3, sen_counter) ORDER BY sen_counter RETURNING text_detections.id, text_detections.id AS id__1
+2025-04-06 11:48:04,555 - sqlalchemy.engine.Engine - INFO - [generated in 0.00034s (insertmanyvalues) 1/1 (ordered)] (4, 'spatial_ref_sys', 0.9805382765953811, '[[137.0, 63.0], [235.0, 63.0], [235.0, 79.0], [137.0, 79.0]]', 4, 'srid', 0.9952616691589355, '[[161.0, 97.0], [187.0, 97.0], [187.0, 111.0], [161.0, 111.0]]', 4, 'int?', 0.41680219769477844, '[[317.0, 97.0], [345.0, 97.0], [345.0, 109.0], [317.0, 109.0]]', 4, 'auth_name', 0.9904090190371562, '[[137.0, 133.0], [205.0, 133.0], [205.0, 147.0], [137.0, 147.0]]', 4, 'anchar', 0.2851727487995466, '[[298.0, 134.0], [342.0, 134.0], [342.0, 142.0], [298.0, 142.0]]', 4, 'auth', 0.9998040199279785, '[[137.0, 169.0], [167.0, 169.0], [167.0, 183.0], [137.0, 183.0]]', 4, 'inta', 0.35468360781669617, '[[317.0, 167.0], [345.0, 167.0], [345.0, 181.0], [317.0, 181.0]]', 4, 'srtext', 0.9897356494075398, '[[137.0, 205.0], [175.0, 205.0], [175.0, 217.0], [137.0, 217.0]]', 4, 'varchar', 0.7940804528234653, '[[298.0, 204.0], [342.0, 204.0], [342.0, 212.0], [298.0, 212.0]]', 4, 'proj4text', 0.9774993145212105, '[[136.0, 237.0], [195.0, 237.0], [195.0, 255.0], [136.0, 255.0]]', 4, 'anchar', 0.342758615450552, '[[298.0, 240.0], [342.0, 240.0], [342.0, 248.0], [298.0, 248.0]]', 4, 'alembic_version', 0.9986103076165477, '[[137.0, 295.0], [243.0, 295.0], [243.0, 311.0], [137.0, 311.0]]', 4, 'version' ... 300 parameters truncated ... 0.693128755288123, '[[641.0, 1211.0], [681.0, 1211.0], [681.0, 1223.0], [641.0, 1223.0]]', 4, 'text', 0.9998291730880737, '[[137.0, 1237.0], [163.0, 1237.0], [163.0, 1251.0], [137.0, 1251.0]]', 4, 'varcnar', 0.2998267001263478, '[[298.0, 1238.0], [342.0, 1238.0], [342.0, 1246.0], [298.0, 1246.0]]', 4, 'location', 0.9889718860511348, '[[473.0, 1247.0], [525.0, 1247.0], [525.0, 1261.0], [473.0, 1261.0]]', 4, 'Geography', 0.345349744690538, '[[623.0, 1249.0], [681.0, 1249.0], [681.0, 1261.0], [623.0, 1261.0]]', 4, 'confidence', 0.9998732570522955, '[[137.0, 1271.0], [205.0, 1271.0], [205.0, 1285.0], [137.0, 1285.0]]', 4, 'float8', 0.3285495773593654, '[[305.0, 1271.0], [345.0, 1271.0], [345.0, 1285.0], [305.0, 1285.0]]', 4, 'embedding', 0.9995429390901442, '[[473.0, 1283.0], [543.0, 1283.0], [543.0, 1299.0], [473.0, 1299.0]]', 4, 'vector', 0.2749380770496148, '[[642.0, 1284.0], [680.0, 1284.0], [680.0, 1292.0], [642.0, 1292.0]]', 4, 'bounding', 0.7964657508169981, '[[136.0, 1305.0], [195.0, 1305.0], [195.0, 1323.0], [136.0, 1323.0]]', 4, 'box', 0.9996642766869263, '[[199.0, 1307.0], [225.0, 1307.0], [225.0, 1321.0], [199.0, 1321.0]]', 4, 'Json', 0.9595755934715271, '[[315.0, 1307.0], [345.0, 1307.0], [345.0, 1321.0], [315.0, 1321.0]]', 4, 'srid', 0.9493166208267212, '[[167.25670585375283, 169.33103526837755], [193.8376105968386, 166.4537322194531], [195.74329414624717, 179.66896473162245], [169.1623894031614, 182.5462677805469]]')
+2025-04-06 11:48:04,586 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-04-06 11:48:04,596 - main - ERROR - Error processing upload: __init__() got an unexpected keyword argument 'encoder'
+2025-04-06 11:52:34,919 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 11:53:08,910 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 11:53:08,913 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:53:08,964 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 11:53:08,964 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:53:09,013 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 11:53:09,013 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 11:53:09,047 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 11:53:09,050 - sqlalchemy.engine.Engine - INFO - INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id
+2025-04-06 11:53:09,050 - sqlalchemy.engine.Engine - INFO - [generated in 0.00028s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 23, 9, 50591), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')
+2025-04-06 11:53:09,151 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 11:53:09,163 - models.inference - ERROR - Error analyzing image /Users/soumya/Desktop/Projects/cortexV2/backend/image/Screenshot 2025-04-06 at 1.51.15 AM.png: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "images_filename_key"
+DETAIL:  Key (filename)=(Screenshot 2025-04-06 at 1.51.15 AM.png) already exists.
+[SQL: INSERT INTO images (filename, created_at, date_taken, camera_make, camera_model, focal_length, exposure_time, f_number, iso, dimensions, format, file_size, location, embedding) VALUES ($1::VARCHAR, $2::TIMESTAMP WITHOUT TIME ZONE, $3::TIMESTAMP WITHOUT TIME ZONE, $4::VARCHAR, $5::VARCHAR, $6::FLOAT, $7::VARCHAR, $8::FLOAT, $9::INTEGER, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, ST_GeogFromText($13), $14) RETURNING images.id]
+[parameters: ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png', datetime.datetime(2025, 4, 6, 6, 23, 9, 50591), None, None, None, 0.0, '', 0.0, None, '882x1378', 'png', 153.18359375, None, '[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, ... (1751 characters truncated) ... ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-04-06 12:03:55,811 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:40:56,403 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 13:40:56,406 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:40:56,451 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 13:40:56,451 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:40:56,489 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 13:40:56,489 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:40:56,518 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 13:40:56,541 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding 
+FROM images 
+WHERE images.filename = $1::VARCHAR
+2025-04-06 13:40:56,541 - sqlalchemy.engine.Engine - INFO - [generated in 0.00013s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png',)
+2025-04-06 13:40:56,657 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 13:40:56,667 - main - ERROR - Error processing upload: name 'distinct' is not defined
+2025-04-06 13:41:51,220 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:41:51,591 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 13:41:51,592 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:41:51,631 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 13:41:51,631 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:41:51,667 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 13:41:51,667 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:41:51,695 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 13:41:51,705 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding 
+FROM images 
+WHERE images.filename = $1::VARCHAR
+2025-04-06 13:41:51,705 - sqlalchemy.engine.Engine - INFO - [generated in 0.00018s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png',)
+2025-04-06 13:41:51,810 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding, array_agg(DISTINCT text_detections.text) AS texts, array_agg(DISTINCT object_detections.label) AS objects, array_agg(DISTINCT scene_classifications.scene_type) AS scenes 
+FROM images LEFT OUTER JOIN text_detections ON images.id = text_detections.image_id LEFT OUTER JOIN object_detections ON images.id = object_detections.image_id LEFT OUTER JOIN scene_classifications ON images.id = scene_classifications.image_id 
+WHERE images.id = $1::INTEGER GROUP BY images.id
+2025-04-06 13:41:51,811 - sqlalchemy.engine.Engine - INFO - [generated in 0.00022s] (4,)
+2025-04-06 13:41:51,853 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 13:43:50,442 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:43:50,704 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 13:43:50,704 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:43:50,747 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 13:43:50,747 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:43:50,788 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 13:43:50,788 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:43:50,816 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 13:43:50,824 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding 
+FROM images 
+WHERE images.filename = $1::VARCHAR
+2025-04-06 13:43:50,824 - sqlalchemy.engine.Engine - INFO - [generated in 0.00018s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png',)
+2025-04-06 13:43:50,939 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding, array_agg(DISTINCT text_detections.text) AS texts, array_agg(DISTINCT object_detections.label) AS objects, array_agg(DISTINCT scene_classifications.scene_type) AS scenes 
+FROM images LEFT OUTER JOIN text_detections ON images.id = text_detections.image_id LEFT OUTER JOIN object_detections ON images.id = object_detections.image_id LEFT OUTER JOIN scene_classifications ON images.id = scene_classifications.image_id 
+WHERE images.id = $1::INTEGER GROUP BY images.id
+2025-04-06 13:43:50,939 - sqlalchemy.engine.Engine - INFO - [generated in 0.00016s] (4,)
+2025-04-06 13:43:50,983 - main - INFO - Found existing image: Screenshot 2025-04-06 at 1.51.15 AM.png
+2025-04-06 13:43:50,983 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-04-06 13:48:10,624 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:48:14,884 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-04-06 13:48:14,886 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:48:14,928 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-04-06 13:48:14,928 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:48:14,965 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-04-06 13:48:14,966 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-04-06 13:48:14,995 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-04-06 13:48:15,028 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding 
+FROM images 
+WHERE images.filename = $1::VARCHAR
+2025-04-06 13:48:15,029 - sqlalchemy.engine.Engine - INFO - [generated in 0.00039s] ('Screenshot 2025-04-06 at 1.51.15\u202fAM.png',)
+2025-04-06 13:48:15,151 - sqlalchemy.engine.Engine - INFO - SELECT images.id, images.filename, images.created_at, images.date_taken, images.camera_make, images.camera_model, images.focal_length, images.exposure_time, images.f_number, images.iso, images.dimensions, images.format, images.file_size, ST_AsBinary(images.location) AS location, images.embedding, coalesce(array_agg(DISTINCT text_detections.text) FILTER (WHERE text_detections.text IS NOT NULL), $1) AS texts, coalesce(array_agg(DISTINCT object_detections.label) FILTER (WHERE object_detections.label IS NOT NULL), $2) AS objects, coalesce(array_agg(DISTINCT scene_classifications.scene_type) FILTER (WHERE scene_classifications.scene_type IS NOT NULL), $3) AS scenes 
+FROM images LEFT OUTER JOIN text_detections ON images.id = text_detections.image_id LEFT OUTER JOIN object_detections ON images.id = object_detections.image_id LEFT OUTER JOIN scene_classifications ON images.id = scene_classifications.image_id 
+WHERE images.id = $4::INTEGER GROUP BY images.id
+2025-04-06 13:48:15,151 - sqlalchemy.engine.Engine - INFO - [generated in 0.00033s] ([], [], [], 4)
+2025-04-06 13:48:15,195 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-04-06 13:48:15,205 - main - INFO - Found existing image: Screenshot 2025-04-06 at 1.51.15 AM.png
+2025-04-06 13:50:23,357 - main - ERROR - Failed to extract metadata from IMG_9448.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:23,357 - main - ERROR - Failed to extract metadata from IMG_9448.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:23,451 - main - ERROR - Failed to extract metadata from c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:23,639 - main - ERROR - Failed to extract metadata from c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:23,886 - main - ERROR - Failed to extract metadata from Screenshot 2025-04-06 at 1.51.15 AM.png: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:26,786 - main - ERROR - Failed to extract metadata from Screenshot 2025-04-06 at 1.51.15 AM.png: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:27,306 - main - ERROR - Failed to extract metadata from IMG_9874.PNG: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:27,803 - main - ERROR - Failed to extract metadata from IMG_9874.PNG: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:28,777 - main - ERROR - Failed to extract metadata from IMG_9205.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:29,709 - main - ERROR - Failed to extract metadata from IMG_9205.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:32,371 - main - ERROR - Failed to extract metadata from IMG_9841.JPG: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:33,886 - main - ERROR - Failed to extract metadata from IMG_9841.JPG: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:36,575 - main - ERROR - Failed to extract metadata from IMG_8247.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:38,367 - main - ERROR - Failed to extract metadata from IMG_8247.jpeg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:38,691 - main - ERROR - Failed to extract metadata from 19a223f2-75e6-4447-894a-9722d00ed13b.jpg: type object 'Image' has no attribute 'open'
+2025-04-06 13:50:39,566 - main - ERROR - Failed to extract metadata from 19a223f2-75e6-4447-894a-9722d00ed13b.jpg: type object 'Image' has no attribute 'open'
+2025-04-06 13:54:27,574 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:55:53,458 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:55:53,504 - main - ERROR - Error serving image IMG_9448.jpeg: name 'mimetypes' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9448.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for Screenshot 2025-04-06 at 1.51.15 AM.png: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9874.PNG: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9205.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9841.JPG: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_8247.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_0277.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_8344.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_7638.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9407.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_8168.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9448.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for Screenshot 2025-04-06 at 1.51.15 AM.png: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9874.PNG: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9205.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_9841.JPG: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_8247.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for 19a223f2-75e6-4447-894a-9722d00ed13b.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_0277.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_8344.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg: name 'asyncio' is not defined
+2025-04-06 13:55:53,507 - main - ERROR - Error setting up tasks for IMG_7638.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,508 - main - ERROR - Error setting up tasks for IMG_9407.jpeg: name 'asyncio' is not defined
+2025-04-06 13:55:53,508 - main - ERROR - Error setting up tasks for IMG_8168.jpeg: name 'asyncio' is not defined
+2025-04-06 13:56:16,025 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 13:57:40,729 - main - ERROR - Error processing IMG_9448.jpeg: float() argument must be a string or a number, not 'datetime.datetime'
+2025-04-06 13:58:13,669 - main - ERROR - Error processing IMG_9448.jpeg: float() argument must be a string or a number, not 'datetime.datetime'
+2025-04-06 14:00:50,513 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 14:00:50,565 - main - ERROR - Error serving image c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: name 'mimetypes' is not defined
+2025-04-06 14:01:26,747 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 14:17:05,210 - models.inference.face_detector - ERROR - Error updating face database: dictionary changed size during iteration
+2025-04-06 14:25:08,518 - main - ERROR - Error serving image Screenshot 2025-04-06 at 1.51.15 AM.png: name 'mimetypes' is not defined
+2025-04-06 14:25:08,537 - main - ERROR - Error serving image IMG_9841.JPG: name 'mimetypes' is not defined
+2025-04-06 14:25:08,548 - main - ERROR - Error serving image IMG_9205.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:08,557 - main - ERROR - Error serving image IMG_9874.PNG: name 'mimetypes' is not defined
+2025-04-06 14:25:08,562 - main - ERROR - Error serving image c0cf4126-8189-4253-a4b8-0ddb7685e657.jpg: name 'mimetypes' is not defined
+2025-04-06 14:25:08,567 - main - ERROR - Error serving image IMG_9448.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:08,758 - main - ERROR - Error serving image 19a223f2-75e6-4447-894a-9722d00ed13b.jpg: name 'mimetypes' is not defined
+2025-04-06 14:25:08,781 - main - ERROR - Error serving image IMG_8247.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:22,211 - main - ERROR - Error serving image IMG_9448.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:24,550 - main - ERROR - Error serving image IMG_0277.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:39,031 - main - ERROR - Error serving image IMG_9205.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:40,346 - main - ERROR - Error serving image IMG_9205.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:25:56,463 - main - ERROR - Error serving image IMG_9205.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:26:02,820 - main - ERROR - Error serving image IMG_9841.JPG: name 'mimetypes' is not defined
+2025-04-06 14:26:58,943 - main - ERROR - Error serving image IMG_8344.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:30:25,154 - main - ERROR - Error serving image dcf1b522-1c30-445e-b5ca-884d9b01affd.jpg: name 'mimetypes' is not defined
+2025-04-06 14:30:25,174 - main - ERROR - Error serving image IMG_7638.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:30:25,176 - main - ERROR - Error serving image IMG_9407.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:30:25,178 - main - ERROR - Error serving image IMG_8168.jpeg: name 'mimetypes' is not defined
+2025-04-06 14:31:39,374 - main - ERROR - Error serving image Screenshot 2025-04-06 at 1.51.15 AM.png: name 'mimetypes' is not defined
+2025-04-06 14:32:27,262 - main - INFO - PhotoCortex models loaded and ready
+2025-04-06 14:33:30,956 - main - INFO - PhotoCortex models loaded and ready

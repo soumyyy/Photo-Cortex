@@ -280,7 +280,7 @@ class FaceDetector:
             if new_embedding.shape[0] != 512:
                 logger.warning(f"Invalid embedding shape: {new_embedding.shape}")
                 return
-                
+            
             new_embedding_bytes = new_embedding.tobytes()
             found_match = False
             best_similarity = 0
@@ -288,23 +288,25 @@ class FaceDetector:
             
             logger.debug(f"Processing face from {image_name}")
             
-            for existing_embedding, data in self.face_db.items():
+            # Create a list of items to avoid dictionary size change during iteration
+            face_db_items = list(self.face_db.items())
+            
+            for existing_embedding, data in face_db_items:
                 try:
-                    existing_embedding_array = np.frombuffer(existing_embedding, dtype=np.float32).reshape(-1)
+                    existing_embedding_array = np.frombuffer(existing_embedding, dtype=np.float32)
+                    similarity = np.dot(new_embedding, existing_embedding_array) / (
+                        np.linalg.norm(new_embedding) * np.linalg.norm(existing_embedding_array)
+                    )
                     
-                    if existing_embedding_array.shape[0] != 512:
-                        continue
-                        
-                    similarity = self._compute_similarity(existing_embedding_array, new_embedding)
-                    
-                    if similarity > best_similarity:
+                    if similarity > self.similarity_threshold and similarity > best_similarity:
                         best_similarity = similarity
                         best_embedding = existing_embedding
-                except Exception:
+                        
+                except Exception as e:
+                    logger.error(f"Error comparing embeddings: {e}")
                     continue
             
-            if best_similarity > self.similarity_threshold:
-                logger.debug(f"Found match with similarity {best_similarity:.3f}")
+            if best_embedding:
                 if 'images' not in self.face_db[best_embedding]:
                     self.face_db[best_embedding]['images'] = set()
                 if 'face_images' not in self.face_db[best_embedding]:

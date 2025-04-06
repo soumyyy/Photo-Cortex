@@ -1,24 +1,29 @@
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
-import json
-import logging
-import mimetypes
 import cv2
 import numpy as np
+import json
 import asyncio
-from PIL import Image
+import logging
+import mimetypes
+from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
-from PIL.TiffImagePlugin import IFDRational
+from datetime import datetime
+import pytz
 from fractions import Fraction
 from typing import AsyncGenerator, List, Optional, Dict, Any
 import time
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.config import get_async_session, get_db
+from sqlalchemy import select, func, distinct
+from database.models import Image as DBImage, TextDetection, ObjectDetection, SceneClassification
 
 # Configure logging
 logging.basicConfig(
@@ -42,9 +47,6 @@ logging.getLogger('fastapi').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# Prepare EXIF tag mapping
-TAGS = TAGS
-
 def convert_to_serializable(value):
     """Convert EXIF values to JSON serializable format."""
     if isinstance(value, Fraction):
@@ -55,62 +57,19 @@ def convert_to_serializable(value):
         return value.decode('utf-8', errors='ignore')
     return value
 
-def extract_metadata(image_path: Path) -> dict:
-    """Extract EXIF metadata from an image file."""
+def extract_image_metadata(image_path: Path) -> Dict[str, Any]:
+    """Extract metadata from an image file."""
     try:
-        with Image.open(image_path) as img:
-            try:
-                exif_info = img._getexif()
-                if exif_info:
-                    # Convert all EXIF values to serializable format
-                    exif_info = {k: convert_to_serializable(v) for k, v in exif_info.items()}
-                    
-                    for tag, value in exif_info.items():
-                        decoded = TAGS.get(tag, tag)
-                        if decoded == 'GPSInfo':
-                            # logger.info(f"Found raw GPS data in {image_path.name}: {value}")
-                            try:
-                                # Extract GPS coordinates
-                                lat_dms = value[2]  # Latitude in degrees, minutes, seconds
-                                lon_dms = value[4]  # Longitude in degrees, minutes, seconds
-                                lat_ref = value[1]  # 'N' or 'S'
-                                lon_ref = value[3]  # 'E' or 'W'
-
-                                # Convert to decimal degrees
-                                lat_deg = float(lat_dms[0]) + float(lat_dms[1])/60 + float(lat_dms[2])/3600
-                                lon_deg = float(lon_dms[0]) + float(lon_dms[1])/60 + float(lon_dms[2])/3600
-
-                                # Apply hemisphere reference
-                                if lat_ref == 'S': lat_deg = -lat_deg
-                                if lon_ref == 'W': lon_deg = -lon_deg
-
-                                # logger.info(f"Converted GPS coordinates for {image_path.name}: {lat_deg}, {lon_deg}")
-                                
-                                # Create basic metadata with GPS
-                                return {
-                                    "date_taken": str(exif_info.get(36867)),  # DateTimeOriginal
-                                    "camera_make": str(exif_info.get(271)),   # Make
-                                    "camera_model": str(exif_info.get(272)),  # Model
-                                    "focal_length": convert_to_serializable(exif_info.get(37386)),
-                                    "exposure_time": convert_to_serializable(exif_info.get(33434)),
-                                    "f_number": convert_to_serializable(exif_info.get(33437)),
-                                    "iso": convert_to_serializable(exif_info.get(34855)),
-                                    "gps": {
-                                        "latitude": lat_deg,
-                                        "longitude": lon_deg
-                                    },
-                                    "dimensions": f"{img.width}x{img.height}",
-                                    "format": img.format,
-                                    "file_size": f"{image_path.stat().st_size / 1024:.1f} KB"
-                                }
-                            except Exception as e:
-                                logger.error(f"Error converting GPS data for {image_path.name}: {e}")
-            except Exception as e:
-                logger.warning(f"Error reading EXIF: {e}")
-
-            # If we get here, either no GPS data or error occurred
-            # Return basic metadata without GPS
-            return {
+        with PILImage.open(image_path) as img:
+            # Get basic image info
+            width, height = img.size
+            format_type = img.format
+            
+            # Initialize metadata dict
+            metadata = {
+                "dimensions": f"{width}x{height}",
+                "format": format_type.lower() if format_type else "unknown",
+                "file_size": image_path.stat().st_size / 1024.0,  # Convert to KB
                 "date_taken": None,
                 "camera_make": None,
                 "camera_model": None,
@@ -118,14 +77,59 @@ def extract_metadata(image_path: Path) -> dict:
                 "exposure_time": None,
                 "f_number": None,
                 "iso": None,
-                "gps": None,
-                "dimensions": f"{img.width}x{img.height}",
-                "format": img.format,
-                "file_size": f"{image_path.stat().st_size / 1024:.1f} KB"
+                "location": None
             }
+            
+            # Extract EXIF data if available
+            if hasattr(img, '_getexif') and img._getexif():
+                exif = img._getexif()
+                if exif:
+                    for tag_id, value in exif.items():
+                        tag = TAGS.get(tag_id, tag_id)
+                        
+                        if tag == 'DateTimeOriginal':
+                            try:
+                                metadata['date_taken'] = datetime.strptime(value, '%Y:%m:%d %H:%M:%S')
+                            except:
+                                pass
+                        elif tag == 'Make':
+                            metadata['camera_make'] = value
+                        elif tag == 'Model':
+                            metadata['camera_model'] = value
+                        elif tag == 'FocalLength':
+                            if isinstance(value, tuple):
+                                metadata['focal_length'] = float(value[0]) / float(value[1])
+                            else:
+                                metadata['focal_length'] = float(value)
+                        elif tag == 'ExposureTime':
+                            if isinstance(value, tuple):
+                                metadata['exposure_time'] = f"{value[0]}/{value[1]}"
+                            else:
+                                metadata['exposure_time'] = str(value)
+                        elif tag == 'FNumber':
+                            if isinstance(value, tuple):
+                                metadata['f_number'] = float(value[0]) / float(value[1])
+                            else:
+                                metadata['f_number'] = float(value)
+                        elif tag == 'ISOSpeedRatings':
+                            metadata['iso'] = int(value) if isinstance(value, (int, str)) else value[0]
+                        
+            return metadata
     except Exception as e:
-        logger.error(f"Failed to extract metadata from {image_path.name}: {str(e)}")
-        return {}
+        logger.error(f"Failed to extract metadata from {image_path.name}: {e}")
+        return {
+            "dimensions": "unknown",
+            "format": image_path.suffix.lower()[1:],
+            "file_size": image_path.stat().st_size / 1024.0,
+            "date_taken": None,
+            "camera_make": None,
+            "camera_model": None,
+            "focal_length": 0.0,
+            "exposure_time": "",
+            "f_number": 0.0,
+            "iso": None,
+            "location": None
+        }
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder for numpy types and PIL EXIF types."""
@@ -136,12 +140,12 @@ class NumpyJSONEncoder(json.JSONEncoder):
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (IFDRational, Fraction)):
+        elif isinstance(obj, Fraction):
             return float(obj)
+        elif isinstance(obj, datetime):
+            return obj.isoformat() if obj else None
         elif isinstance(obj, bytes):
             return obj.decode('utf-8', errors='ignore')
-        elif isinstance(obj, Path):
-            return str(obj)
         return super().default(obj)
 
 # Initialize the analyzer only once
@@ -242,7 +246,7 @@ async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
         for image_path in batch:
             try:
                 # Extract metadata first to check for GPS data
-                metadata = await asyncio.get_event_loop().run_in_executor(None, extract_metadata, image_path)
+                metadata = await asyncio.get_event_loop().run_in_executor(None, extract_image_metadata, image_path)
                 
                 # Load the image only once
                 image = cv2.imread(str(image_path))
@@ -494,45 +498,112 @@ async def process_image_for_text_search(image_file: Path, query: str, cache_dir:
         logger.error(f"Error processing {image_file.name} for text search: {e}")
         return None
 
-@app.get("/analyze_face/{image_name}")
-async def analyze_face(image_name: str):
-    """Analyze facial attributes in an image."""
+@app.post("/upload")
+async def upload_image(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Upload and analyze a single image."""
     try:
-        # Use consistent directory paths with other handlers
-        image_path = Path(APP_CONFIG["IMAGES_DIR"]) / image_name
+        # Save the uploaded file
+        file_path = IMAGES_DIR / file.filename
         
-        if not image_path.exists():
-            return JSONResponse({"error": "Image not found"}, status_code=404)
-            
-        # Get cached result if available
-        cache_key = f"face_analysis_{image_name}"
+        # Check if image already exists in database
+        query = select(DBImage).where(DBImage.filename == file.filename)
+        result = await db.execute(query)
+        existing_image = result.scalar_one_or_none()
         
-        # Try to use cached result
-        if hasattr(analyzer, "analysis_cache") and cache_key in analyzer.analysis_cache:
-            return JSONResponse(content=analyzer.analysis_cache[cache_key], encoder=NumpyJSONEncoder)
+        if existing_image:
+            # Image exists, return cached analysis
+            try:
+                query = select(
+                    DBImage,
+                    func.coalesce(func.array_agg(distinct(TextDetection.text)).filter(TextDetection.text != None), []).label('texts'),
+                    func.coalesce(func.array_agg(distinct(ObjectDetection.label)).filter(ObjectDetection.label != None), []).label('objects'),
+                    func.coalesce(func.array_agg(distinct(SceneClassification.scene_type)).filter(SceneClassification.scene_type != None), []).label('scenes')
+                ).outerjoin(DBImage.text_detections)\
+                 .outerjoin(DBImage.object_detections)\
+                 .outerjoin(DBImage.scene_classifications)\
+                 .where(DBImage.id == existing_image.id)\
+                 .group_by(DBImage.id)
+                
+                result = await db.execute(query)
+                image_data = result.first()
+                await db.commit()  # Commit after successful read
+                
+                if image_data:
+                    logger.info(f"Found existing image: {file.filename}")
+                    return JSONResponse(content={
+                        "success": True,
+                        "exists": True,
+                        "result": {
+                            "filename": image_data.DBImage.filename,
+                            "metadata": {
+                                "date_taken": image_data.DBImage.date_taken,
+                                "camera_make": image_data.DBImage.camera_make,
+                                "camera_model": image_data.DBImage.camera_model,
+                                "focal_length": image_data.DBImage.focal_length,
+                                "exposure_time": image_data.DBImage.exposure_time,
+                                "f_number": image_data.DBImage.f_number,
+                                "iso": image_data.DBImage.iso,
+                                "dimensions": image_data.DBImage.dimensions,
+                                "format": image_data.DBImage.format,
+                                "file_size": image_data.DBImage.file_size
+                            },
+                            "text_recognition": {
+                                "text_detected": bool(image_data.texts and image_data.texts[0]),
+                                "text_blocks": image_data.texts if image_data.texts and image_data.texts[0] else []
+                            },
+                            "object_detection": image_data.objects if image_data.objects and image_data.objects[0] else [],
+                            "scene_classification": {
+                                "scene_type": image_data.scenes[0] if image_data.scenes and image_data.scenes[0] else "Unknown",
+                                "confidence": 1.0  # Using cached result
+                            }
+                        }
+                    })
+            except Exception as query_error:
+                await db.rollback()
+                logger.error(f"Error querying existing image: {query_error}")
+                raise
+
+        # Image doesn't exist, save it
+        content = await file.read()
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
         
-        # Analyze the image
-        image = cv2.imread(str(image_path))
-        if image is None:
-            return JSONResponse({"error": "Could not read image"}, status_code=400)
-            
-        results = analyzer.face_detector.detect_faces(image, image_name, analyze_attributes=True)
+        # Analyze the image and save results to database
+        result = await analyzer.analyze_image_with_session(file_path, db)
         
-        if "error" in results:
-            return JSONResponse(content=results, status_code=400)
-            
-        # Store result in cache
-        if not hasattr(analyzer, "analysis_cache"):
-            analyzer.analysis_cache = {}
-        analyzer.analysis_cache[cache_key] = results
+        if "error" in result:
+            return JSONResponse(
+                status_code=500,
+                content={"success": False, "error": result["error"]}
+            )
         
-        return JSONResponse(content=results, encoder=NumpyJSONEncoder)
+        # Convert numpy types to Python types before JSON serialization
+        result = json.loads(json.dumps(result, cls=NumpyJSONEncoder))
+        await db.commit()  # Commit the transaction
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "exists": False,
+                "result": result
+            }
+        )
+        
     except Exception as e:
-        logger.error(f"Error analyzing face: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        logger.error(f"Error processing upload: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
 
 @app.post("/scan-text")
-async def scan_text(file_data: dict):
+async def scan_text(
+    file_data: dict,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Scan text in an image using the TextRecognizer class.
     """
