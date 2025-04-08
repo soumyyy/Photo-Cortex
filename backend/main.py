@@ -3,27 +3,34 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 from pathlib import Path
+import logging
+import json
+from typing import List, Dict, Any, Optional, AsyncGenerator
+import asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.database_service import DatabaseService
+from database.config import get_async_session, get_db
+from pydantic import BaseModel
 import cv2
 import numpy as np
-import json
-import asyncio
-import logging
 import mimetypes
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
 from datetime import datetime
 import pytz
 from fractions import Fraction
-from typing import AsyncGenerator, List, Optional, Dict, Any
 import time
-from sqlalchemy.ext.asyncio import AsyncSession
-from database.config import get_async_session, get_db
 from sqlalchemy import select, func, distinct
 from database.models import Image as DBImage, TextDetection, ObjectDetection, SceneClassification
+from fastapi.responses import JSONResponse
+from fastapi import status
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+import shutil
+from werkzeug.utils import secure_filename
 
 # Configure logging
 logging.basicConfig(
@@ -232,122 +239,180 @@ async def serve_image(image_path: str):
         logger.error(f"Error serving image {image_path}: {e}")
         return JSONResponse(status_code=500, content={"error": f"Failed to serve image: {e}"})
 
-async def analyze_image_stream(image_files: list) -> AsyncGenerator[str, None]:
-    """Stream analysis results for each image."""
-    total_files = len(image_files)
-    results = []
-    # Process images in larger batches for better performance
-    batch_size = 8  # Increased batch size
-    
-    for i in range(0, len(image_files), batch_size):
-        batch = image_files[i:i+batch_size]
-        batch_tasks = []
-        
-        for image_path in batch:
-            try:
-                # Extract metadata first to check for GPS data
-                metadata = await asyncio.get_event_loop().run_in_executor(None, extract_image_metadata, image_path)
-                
-                # Load the image only once
-                image = cv2.imread(str(image_path))
-                if image is None or image.size == 0 or len(image.shape) != 3:
-                    continue
-                if image.shape[2] == 4:
-                    image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-                
-                # Run face and object detection in parallel, but text recognition separately
-                # since it's the most resource-intensive
-                loop = asyncio.get_event_loop()
-                tasks = asyncio.gather(
-                    loop.run_in_executor(None, analyzer.face_detector.detect_faces, image, image_path.name),
-                    loop.run_in_executor(None, analyzer.object_detector.detect_objects, image),
-                    loop.run_in_executor(None, analyzer.scene_classifier.predict_scene, image)
-                )
-                
-                batch_tasks.append((image_path, tasks, metadata))
-            except Exception as e:
-                logger.error(f"Error setting up tasks for {image_path.name}: {e}")
-                continue
-        
-        # Process all images in the batch concurrently
-        for idx, (image_path, tasks, metadata) in enumerate(batch_tasks):
-            try:
-                face_results, object_results, scene_results = await tasks
-                
-                # Run text recognition separately to avoid memory issues
-                text_results = await asyncio.get_event_loop().run_in_executor(
-                    None, analyzer.text_recognizer.detect_text, str(image_path)
-                )
-                
-                result = {
-                    "filename": image_path.name,
-                    "faces": face_results.get("faces", []),
-                    "objects": sorted(list(set(obj["class"] for obj in object_results))) if object_results else [],
-                    "scene_classification": {
-                        "scene_type": scene_results.get("scene_type", "unknown"),
-                        "confidence": float(scene_results.get("confidence", 0.0)),
-                        "all_scene_scores": {k: float(v) for k, v in scene_results.get("all_scene_scores", {}).items()}
-                    } if scene_results else {"scene_type": "unknown", "confidence": 0.0, "all_scene_scores": {}},
-                    "text_recognition": {
-                        "text_detected": text_results.get("text_detected", False),
-                        "text_blocks": text_results.get("text_blocks", []),
-                        "total_confidence": float(text_results.get("total_confidence", 0.0)),
-                        "categories": text_results.get("categories", []),
-                        "raw_text": text_results.get("raw_text", ""),
-                        "language": text_results.get("language", "unknown")
-                    } if text_results else {
-                        "text_detected": False,
-                        "text_blocks": [],
-                        "total_confidence": 0.0,
-                        "categories": [],
-                        "raw_text": "",
-                        "language": "unknown"
-                    },
-                    "metadata": metadata or {}
-                }
-
-                # Convert any numpy values to Python native types
-                result = json.loads(json.dumps(result, cls=NumpyJSONEncoder))
-                results.append(result)
-                
-                current_count = i + idx + 1
-                progress = {
-                    "progress": min(100, (current_count / total_files) * 100),
-                    "current": current_count,
-                    "total": total_files,
-                    "latest_result": result,
-                    "complete": False
-                }
-                
-                # Ensure proper JSON formatting with newline
-                yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
-                
-            except Exception as e:
-                logger.error(f"Error processing {image_path.name}: {e}")
-                continue
-    
-    final_update = {
-        "progress": 100,
-        "current": total_files,
-        "total": total_files,
-        "results": results,
-        "complete": True
-    }
-    
-    # Ensure proper JSON formatting with newline
-    yield json.dumps(final_update, cls=NumpyJSONEncoder) + "\n"
-
 @app.get("/analyze-folder")
-async def analyze_folder():
+async def analyze_folder(db: AsyncSession = Depends(get_db)):
     """Analyze all images in the folder and stream results."""
     try:
         image_files = [f for f in IMAGES_DIR.glob("*") if f.suffix.lower() in {'.jpg', '.jpeg', '.png'}]
         if not image_files:
             return JSONResponse(status_code=400, content={"error": "No images found in the directory"})
-        return StreamingResponse(analyze_image_stream(image_files), media_type="text/event-stream")
+        
+        # Create database service
+        db_service = DatabaseService(lambda: db)
+        return StreamingResponse(analyze_image_stream(image_files, db_service), media_type="text/event-stream")
     except Exception as e:
         logger.error(f"Failed to analyze folder: {e}")
         return JSONResponse(status_code=500, content={"error": "Failed to analyze folder"})
+
+async def analyze_image_stream(image_files: list, db_service: DatabaseService) -> AsyncGenerator[str, None]:
+    """Stream analysis results for each image."""
+    total_files = len(image_files)
+    results = []
+    batch_size = 8
+    
+    for i in range(0, len(image_files), batch_size):
+        batch = image_files[i:i+batch_size]
+        
+        for image_path in batch:
+            try:
+                # Check if image already exists in database
+                existing_image = await db_service.get_image_by_filename(image_path.name)
+                is_cached = False
+                if existing_image:
+                    # Get cached analysis results
+                    cached_result = await db_service.get_image_analysis(existing_image.id)
+                    if cached_result:
+                        logger.info(f"Using cached analysis for {image_path.name}")
+                        # Use the cached result directly
+                        analysis_data = cached_result
+                        results.append({
+                            "filename": image_path.name,
+                            "analysis": analysis_data,
+                            "cached": True
+                        })
+                        is_cached = True
+                    else:
+                        logger.warning(f"Cached image found for {image_path.name} but failed to get analysis.")
+                        # Proceed to re-analyze if cache retrieval failed
+                        is_cached = False
+                else:
+                    is_cached = False
+
+                if not is_cached:
+                    logger.info(f"Analyzing image: {image_path.name}")
+                    # Get a session from the database service
+                    session = await db_service.get_session()
+                    try:
+                        # Analyze image with session (this saves to DB and returns image_id)
+                        saved_result = await analyzer.analyze_image_with_session(str(image_path), session)
+                        
+                        # Check if we got a valid image ID or an error dictionary
+                        if isinstance(saved_result, int):
+                            # Retrieve the saved analysis data in the correct format
+                            analysis_data = await db_service.get_image_analysis(saved_result)
+                            if analysis_data:
+                                results.append({
+                                    "filename": image_path.name,
+                                    "analysis": analysis_data,
+                                    "cached": False
+                                })
+                            else:
+                                logger.error(f"Failed to retrieve analysis for {image_path.name} after saving (ID: {saved_result})")
+                                # Handle error case, yield an error status
+                                error_progress = {
+                                    "progress": min(100, int((len(results) / total_files) * 100)),
+                                    "current": len(results),
+                                    "total": total_files,
+                                    "filename": image_path.name,
+                                    "error": f"Failed to retrieve analysis after saving",
+                                    "complete": False
+                                }
+                                yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
+                        elif isinstance(saved_result, dict) and 'error' in saved_result:
+                            # This is an error case from analyze_image_with_session
+                            logger.error(f"Error analyzing image {image_path.name}: {saved_result['error']}")
+                            error_progress = {
+                                "progress": min(100, int((len(results) / total_files) * 100)),
+                                "current": len(results),
+                                "total": total_files,
+                                "filename": image_path.name,
+                                "error": saved_result['error'],
+                                "complete": False
+                            }
+                            yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
+                        else:
+                            logger.error(f"Failed to analyze and save image {image_path.name}, unexpected result: {saved_result}")
+                            # Handle error case, yield an error status
+                            error_progress = {
+                                "progress": min(100, int((len(results) / total_files) * 100)),
+                                "current": len(results),
+                                "total": total_files,
+                                "filename": image_path.name,
+                                "error": "Unknown error during analysis",
+                                "complete": False
+                            }
+                            yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
+                    except Exception as e:
+                        logger.exception(f"Error during analysis or retrieval for {image_path.name}")
+                        # Handle error case
+                    finally:
+                        await session.close() # Ensure session is closed
+
+                # Send progress update regardless of cache status
+                progress = {
+                    "progress": min(100, int((len(results) / total_files) * 100)),
+                    "current": len(results),
+                    "total": total_files,
+                    "filename": image_path.name,
+                    "cached": is_cached,
+                    "complete": False
+                }
+                yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
+
+            except Exception as e:
+                logger.exception(f"Error processing {image_path.name}: {e}")
+                # Yield error status for this specific file
+                error_progress = {
+                    "progress": min(100, int((len(results) / total_files) * 100)),
+                    "current": len(results),
+                    "total": total_files,
+                    "filename": image_path.name,
+                    "error": str(e),
+                    "complete": False
+                }
+                yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
+                continue # Move to the next file
+
+    # Final completion message
+    completion_message = {
+        "progress": 100,
+        "current": total_files,
+        "total": total_files,
+        "complete": True,
+        "results": results
+    }
+    yield json.dumps(completion_message, cls=NumpyJSONEncoder) + "\n"
+
+@app.get("/image-analysis/{filename}")
+async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
+    """Get cached analysis results for an image."""
+    try:
+        db_service = DatabaseService(lambda: db)
+        image = await db_service.get_image_by_filename(filename)
+        if not image:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"No analysis found for image: {filename}"}
+            )
+        
+        analysis = await db_service.get_image_analysis(image.id)
+        if not analysis:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"No analysis found for image: {filename}"}
+            )
+            
+        return JSONResponse(content={
+            "filename": filename,
+            "analysis": analysis
+        })
+        
+    except Exception as e:
+        logger.error(f"Error retrieving analysis for {filename}: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve analysis: {str(e)}"}
+        )
 
 @app.get("/unique-faces")
 async def get_unique_faces():
@@ -498,105 +563,136 @@ async def process_image_for_text_search(image_file: Path, query: str, cache_dir:
         logger.error(f"Error processing {image_file.name} for text search: {e}")
         return None
 
-@app.post("/upload")
+class UploadResponse(BaseModel):
+    filename: str
+    analysis: dict
+    cached: bool = False
+
+@app.post("/upload", response_model=UploadResponse)
 async def upload_image(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)
 ):
-    """Upload and analyze a single image."""
+    """
+    Upload and analyze a single image, storing results in the database.
+    If the image was previously analyzed, returns cached results.
+    """
     try:
-        # Save the uploaded file
-        file_path = IMAGES_DIR / file.filename
+        # Create database service
+        db_service = DatabaseService(lambda: db)
         
-        # Check if image already exists in database
-        query = select(DBImage).where(DBImage.filename == file.filename)
-        result = await db.execute(query)
-        existing_image = result.scalar_one_or_none()
-        
-        if existing_image:
-            # Image exists, return cached analysis
-            try:
-                query = select(
-                    DBImage,
-                    func.coalesce(func.array_agg(distinct(TextDetection.text)).filter(TextDetection.text != None), []).label('texts'),
-                    func.coalesce(func.array_agg(distinct(ObjectDetection.label)).filter(ObjectDetection.label != None), []).label('objects'),
-                    func.coalesce(func.array_agg(distinct(SceneClassification.scene_type)).filter(SceneClassification.scene_type != None), []).label('scenes')
-                ).outerjoin(DBImage.text_detections)\
-                 .outerjoin(DBImage.object_detections)\
-                 .outerjoin(DBImage.scene_classifications)\
-                 .where(DBImage.id == existing_image.id)\
-                 .group_by(DBImage.id)
-                
-                result = await db.execute(query)
-                image_data = result.first()
-                await db.commit()  # Commit after successful read
-                
-                if image_data:
-                    logger.info(f"Found existing image: {file.filename}")
-                    return JSONResponse(content={
-                        "success": True,
-                        "exists": True,
-                        "result": {
-                            "filename": image_data.DBImage.filename,
-                            "metadata": {
-                                "date_taken": image_data.DBImage.date_taken,
-                                "camera_make": image_data.DBImage.camera_make,
-                                "camera_model": image_data.DBImage.camera_model,
-                                "focal_length": image_data.DBImage.focal_length,
-                                "exposure_time": image_data.DBImage.exposure_time,
-                                "f_number": image_data.DBImage.f_number,
-                                "iso": image_data.DBImage.iso,
-                                "dimensions": image_data.DBImage.dimensions,
-                                "format": image_data.DBImage.format,
-                                "file_size": image_data.DBImage.file_size
-                            },
-                            "text_recognition": {
-                                "text_detected": bool(image_data.texts and image_data.texts[0]),
-                                "text_blocks": image_data.texts if image_data.texts and image_data.texts[0] else []
-                            },
-                            "object_detection": image_data.objects if image_data.objects and image_data.objects[0] else [],
-                            "scene_classification": {
-                                "scene_type": image_data.scenes[0] if image_data.scenes and image_data.scenes[0] else "Unknown",
-                                "confidence": 1.0  # Using cached result
-                            }
-                        }
-                    })
-            except Exception as query_error:
-                await db.rollback()
-                logger.error(f"Error querying existing image: {query_error}")
-                raise
-
-        # Image doesn't exist, save it
-        content = await file.read()
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-        
-        # Analyze the image and save results to database
-        result = await analyzer.analyze_image_with_session(file_path, db)
-        
-        if "error" in result:
-            return JSONResponse(
-                status_code=500,
-                content={"success": False, "error": result["error"]}
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=400,
+                detail="File must be an image"
             )
+            
+        # Generate safe filename
+        filename = secure_filename(file.filename)
+        file_path = IMAGES_DIR / filename
         
-        # Convert numpy types to Python types before JSON serialization
-        result = json.loads(json.dumps(result, cls=NumpyJSONEncoder))
-        await db.commit()  # Commit the transaction
+        # Check if file already exists and analyzed
+        existing_image = await db_service.get_image_by_filename(filename)
+        if existing_image:
+            cached_analysis = await db_service.get_image_analysis(existing_image.id)
+            if cached_analysis:
+                return UploadResponse(
+                    filename=filename,
+                    analysis=cached_analysis,
+                    cached=True
+                )
         
-        return JSONResponse(
-            content={
-                "success": True,
-                "exists": False,
-                "result": result
+        # Save uploaded file
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        finally:
+            await file.close()
+            
+        # Extract metadata
+        metadata = extract_image_metadata(file_path)
+        
+        # Run analysis
+        try:
+            analysis = await analyzer.analyze_image(str(file_path))
+        except Exception as e:
+            logger.error(f"Error analyzing image {file_path}: {str(e)}")
+            analysis = {
+                "faces": [],
+                "objects": [],
+                "text_recognition": {"text_detected": False, "text_blocks": []},
+                "scene_classification": None,
+                "embedding": None
             }
+        
+        # Prepare image data for database
+        image_data = {
+            "filename": filename,
+            "dimensions": metadata.get("dimensions"),
+            "format": metadata.get("format"),
+            "file_size": metadata.get("file_size"),
+            "date_taken": metadata.get("date_taken"),
+            "latitude": metadata.get("latitude"),
+            "longitude": metadata.get("longitude"),
+        }
+        
+        # Extract EXIF data for separate parameter
+        exif_data = {
+            "camera_make": metadata.get("camera_make"),
+            "camera_model": metadata.get("camera_model"),
+            "focal_length": metadata.get("focal_length"),
+            "exposure_time": metadata.get("exposure_time"),
+            "f_number": metadata.get("f_number"),
+            "iso": metadata.get("iso")
+        }
+        
+        # Add analysis data to image_data
+        if "faces" in analysis:
+            image_data["faces"] = analysis["faces"]
+        if "objects" in analysis:
+            image_data["objects"] = analysis["objects"]
+        if "text_recognition" in analysis:
+            image_data["text_recognition"] = analysis["text_recognition"]
+        if "scene_classification" in analysis:
+            image_data["scene_classification"] = analysis["scene_classification"]
+        if "embedding" in analysis:
+            image_data["embedding"] = analysis["embedding"]
+        
+        # CRITICAL: Remove any EXIF fields from image_data to prevent the 'camera_make' error
+        exif_fields = ["camera_make", "camera_model", "focal_length", "exposure_time", "f_number", "iso"]
+        for field in exif_fields:
+            if field in image_data:
+                del image_data[field]
+                
+        # If analysis contains metadata with EXIF data, make sure it doesn't get into image_data
+        if "metadata" in analysis and isinstance(analysis["metadata"], dict):
+            for field in exif_fields:
+                if field in analysis["metadata"]:
+                    # Don't add these fields to image_data
+                    pass
+                
+        saved_image = await db_service.save_image_analysis(image_data, exif_data)
+        
+        if not saved_image:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to save image analysis"
+            )
+            
+        return UploadResponse(
+            filename=filename,
+            analysis=analysis,
+            cached=False
         )
         
     except Exception as e:
-        logger.error(f"Error processing upload: {str(e)}", exc_info=True)
-        return JSONResponse(
+        logger.error(f"Error processing upload: {str(e)}")
+        if file_path.exists():
+            file_path.unlink()  # Clean up file if analysis failed
+        raise HTTPException(
             status_code=500,
-            content={"success": False, "error": str(e)}
+            detail=f"Failed to process image: {str(e)}"
         )
 
 @app.post("/scan-text")

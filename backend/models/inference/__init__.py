@@ -10,7 +10,7 @@ import cv2
 import os
 import datetime
 from geoalchemy2.shape import WKTElement
-from database.models import Image, TextDetection, FaceDetection, ObjectDetection, SceneClassification, FaceIdentity
+from database.models import Image, TextDetection, FaceDetection, ObjectDetection, SceneClassification, FaceIdentity, ExifMetadata
 
 __all__ = ['ImageAnalyzer', 'TextRecognizer']
 
@@ -192,29 +192,47 @@ class ImageAnalyzer:
             object_analysis = self.object_detector.detect_objects(image)
             scene_analysis = self.scene_classifier.classify_scene_combined(image)
 
-            # Create Image record
-            db_image = Image(
-                filename=image_path.name,
-                dimensions=f"{image.shape[1]}x{image.shape[0]}",
-                format=image_path.suffix[1:],  # Remove leading dot
-                file_size=image_path.stat().st_size / 1024,  # Convert to KB
-                date_taken=metadata.get("date_taken"),
-                camera_make=metadata.get("camera_make"),
-                camera_model=metadata.get("camera_model"),
-                focal_length=metadata.get("focal_length"),
-                exposure_time=metadata.get("exposure_time"),
-                f_number=metadata.get("f_number"),
-                iso=metadata.get("iso"),
-                embedding=np.zeros(512)  # Default empty embedding until CLIP is implemented
-            )
+            # CRITICAL: Create a clean dictionary with ONLY valid Image model fields
+            # This ensures no EXIF fields are passed to the Image constructor
+            image_fields = {
+                "filename": image_path.name,
+                "dimensions": f"{image.shape[1]}x{image.shape[0]}",
+                "format": image_path.suffix[1:].lower(),  # Remove leading dot
+                "file_size": int(image_path.stat().st_size),  # in bytes
+                "date_taken": metadata.get("date_taken"),
+                "embedding": np.zeros(512)  # Default empty embedding until CLIP is implemented
+            }
 
             # Add GPS location if available
             if metadata.get("gps"):
                 lat, lon = metadata["gps"]
-                db_image.location = WKTElement(f'POINT({lon} {lat})', srid=4326)
+                image_fields["location"] = WKTElement(f'POINT({lon} {lat})', srid=4326)
+                image_fields["latitude"] = lat
+                image_fields["longitude"] = lon
 
+            # Create the Image model with only the valid fields
+            db_image = Image(**image_fields)
             session.add(db_image)
             await session.flush()  # Get the image ID
+            
+            # Create EXIF metadata record as a SEPARATE model
+            # These fields should NEVER be passed to the Image model
+            exif_data = {
+                "camera_make": metadata.get("exif", {}).get("camera_make"),
+                "camera_model": metadata.get("exif", {}).get("camera_model"),
+                "focal_length": metadata.get("exif", {}).get("focal_length"),
+                "exposure_time": metadata.get("exif", {}).get("exposure_time"),
+                "f_number": metadata.get("exif", {}).get("f_number"),
+                "iso": metadata.get("exif", {}).get("iso")
+            }
+            
+            # Only create EXIF record if we have any EXIF data
+            if any(exif_data.values()):
+                exif = ExifMetadata(
+                    image_id=db_image.id,
+                    **{k: v for k, v in exif_data.items() if v is not None}
+                )
+                session.add(exif)
 
             # Save text detections
             if text_analysis.get("text_detected", False):
@@ -282,30 +300,62 @@ class ImageAnalyzer:
             from PIL import Image
             from PIL.ExifTags import TAGS
             
-            metadata = {}
+            # Initialize base metadata dictionary
+            metadata = {
+                "dimensions": None,
+                "format": None,
+                "file_size": None,
+                "date_taken": None,
+                "gps": None
+            }
+            
+            # Initialize EXIF metadata dictionary
+            exif_metadata = {
+                "camera_make": None,
+                "camera_model": None,
+                "focal_length": None,
+                "exposure_time": None,
+                "f_number": None,
+                "iso": None
+            }
+            
             with Image.open(image_path) as img:
+                # Set basic metadata
+                metadata["dimensions"] = f"{img.width}x{img.height}"
+                metadata["format"] = image_path.suffix[1:].lower()  # Remove leading dot
+                metadata["file_size"] = image_path.stat().st_size  # in bytes
+                
                 try:
                     exif = img._getexif()
                     if exif:
+                        raw_exif = {}
                         for tag_id, value in exif.items():
                             tag = TAGS.get(tag_id, tag_id)
-                            metadata[tag] = value
+                            raw_exif[tag] = value
 
-                        # Extract common EXIF fields
-                        if "DateTimeOriginal" in metadata:
+                        # Extract date taken
+                        if "DateTimeOriginal" in raw_exif:
                             metadata["date_taken"] = datetime.datetime.strptime(
-                                metadata["DateTimeOriginal"], "%Y:%m:%d %H:%M:%S"
+                                raw_exif["DateTimeOriginal"], "%Y:%m:%d %H:%M:%S"
                             )
-                        metadata["camera_make"] = metadata.get("Make")
-                        metadata["camera_model"] = metadata.get("Model")
-                        metadata["focal_length"] = float(str(metadata.get("FocalLength", "0")).split()[0])
-                        metadata["exposure_time"] = str(metadata.get("ExposureTime", ""))
-                        metadata["f_number"] = float(str(metadata.get("FNumber", "0")).split()[0])
-                        metadata["iso"] = metadata.get("ISOSpeedRatings")
+                            
+                        # Extract EXIF data (separate from basic metadata)
+                        exif_metadata["camera_make"] = raw_exif.get("Make")
+                        exif_metadata["camera_model"] = raw_exif.get("Model")
+                        
+                        if "FocalLength" in raw_exif:
+                            exif_metadata["focal_length"] = float(str(raw_exif["FocalLength"]).split()[0])
+                            
+                        exif_metadata["exposure_time"] = str(raw_exif.get("ExposureTime", ""))
+                        
+                        if "FNumber" in raw_exif:
+                            exif_metadata["f_number"] = float(str(raw_exif["FNumber"]).split()[0])
+                            
+                        exif_metadata["iso"] = raw_exif.get("ISOSpeedRatings")
 
                         # Extract GPS data
-                        if "GPSInfo" in metadata:
-                            gps = metadata["GPSInfo"]
+                        if "GPSInfo" in raw_exif:
+                            gps = raw_exif["GPSInfo"]
                             if all(i in gps for i in (1, 2, 3, 4)):
                                 lat = self._convert_to_degrees(gps[2], gps[1])
                                 lon = self._convert_to_degrees(gps[4], gps[3])
@@ -314,11 +364,15 @@ class ImageAnalyzer:
                 except Exception as e:
                     logger.error(f"Error extracting EXIF: {str(e)}")
 
-            return metadata
+            # Combine metadata and exif_metadata
+            result = {**metadata}
+            result["exif"] = exif_metadata
+            
+            return result
 
         except Exception as e:
             logger.error(f"Error opening image for metadata: {str(e)}")
-            return {}
+            return {"exif": {}}
 
     def _convert_to_degrees(self, value, ref) -> float:
         """Convert GPS coordinates to degrees."""

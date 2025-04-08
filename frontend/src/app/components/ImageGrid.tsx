@@ -311,49 +311,13 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
           console.error(`Failed to load image: ${image.filename}`, e);
         }}
       />
+      {image.cached && (
+        <div className="absolute top-2 right-2 bg-blue-500/80 text-white text-xs px-2 py-1 rounded-full">
+          Cached
+        </div>
+      )}
     </div>
   );
-
-  // const renderImageActions = (image: ImageAnalysis) => {
-  //   const hasResults = Boolean(scanResults[image.filename]);
-  //   const isShowingText = showTextOverlays[image.filename];
-    
-  //   return (
-  //     <button
-  //       className={`scan-button ${isShowingText ? 'active' : ''}`}
-  //       onClick={(e) => {
-  //         e.stopPropagation();
-  //         if (hasResults) {
-  //           // Toggle highlights with smooth transition
-  //           setShowTextOverlays(prev => ({ ...prev, [image.filename]: !prev[image.filename] }));
-  //         } else {
-  //           // Scan if not yet scanned
-  //           handleScanClick(image);
-  //         }
-  //       }}
-  //       disabled={isScanning === image.filename}
-  //     >
-  //       {isScanning === image.filename ? (
-  //         <>
-  //           <Spinner className="w-4 h-4" />
-  //           <span>Scanning...</span>
-  //         </>
-  //       ) : (
-  //         <>
-  //           <DocumentTextIcon className={`w-4 h-4 transition-transform duration-300 ${isShowingText ? 'rotate-180' : ''}`} />
-  //           <span>
-  //             {hasResults
-  //               ? isShowingText
-  //                 ? 'Hide Text'
-  //                 : 'Show Text'
-  //               : 'Scan Text'
-  //             }
-  //           </span>
-  //         </>
-  //       )}
-  //     </button>
-  //   );
-  // };
 
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-8 sm:px-6 sm:py-12">
@@ -377,10 +341,15 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
                 <div className="animate-pulse bg-[#111111] w-full h-full" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
               <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
                 <p className="text-sm font-medium text-white/90 truncate mb-1">{image.filename}</p>
                 <p className="text-xs text-white/70">{image.scene_classification?.scene_type}</p>
+                {image.cached && (
+                  <span className="text-blue-300 text-xs">
+                    Cached {image.analysis_date && `• ${formatDate(image.analysis_date)}`}
+                  </span>
+                )}
               </div>
             </div>
           </div>

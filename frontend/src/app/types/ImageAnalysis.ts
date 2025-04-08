@@ -41,6 +41,8 @@ export interface ImageAnalysis {
     raw_text: string;
     language: string;
   };
+  cached?: boolean;
+  analysis_date?: string;
 }
 
 export interface Face {
@@ -59,4 +61,10 @@ export interface Face {
     };
     landmarks: number[][];
   };
+}
+
+export interface UploadResponse {
+  filename: string;
+  analysis: ImageAnalysis;
+  cached: boolean;
 }
