@@ -275,11 +275,10 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
                         logger.info(f"Using cached analysis for {image_path.name}")
                         # Use the cached result directly
                         analysis_data = cached_result
-                        results.append({
-                            "filename": image_path.name,
-                            "analysis": analysis_data,
-                            "cached": True
-                        })
+                        # Include the filename in the analysis data
+                        analysis_data["filename"] = image_path.name
+                        # Add to results without nesting under "analysis"
+                        results.append(analysis_data)
                         is_cached = True
                     else:
                         logger.warning(f"Cached image found for {image_path.name} but failed to get analysis.")
@@ -301,11 +300,10 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
                             # Retrieve the saved analysis data in the correct format
                             analysis_data = await db_service.get_image_analysis(saved_result)
                             if analysis_data:
-                                results.append({
-                                    "filename": image_path.name,
-                                    "analysis": analysis_data,
-                                    "cached": False
-                                })
+                                # Include the filename in the analysis data
+                                analysis_data["filename"] = image_path.name
+                                # Add to results without nesting under "analysis"
+                                results.append(analysis_data)
                             else:
                                 logger.error(f"Failed to retrieve analysis for {image_path.name} after saving (ID: {saved_result})")
                                 # Handle error case, yield an error status
@@ -373,15 +371,15 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
                 yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
                 continue # Move to the next file
 
-    # Final completion message
-    completion_message = {
+    # Yield final results
+    final_data = {
         "progress": 100,
-        "current": total_files,
+        "current": len(results),
         "total": total_files,
         "complete": True,
         "results": results
     }
-    yield json.dumps(completion_message, cls=NumpyJSONEncoder) + "\n"
+    yield json.dumps(final_data, cls=NumpyJSONEncoder) + "\n"
 
 @app.get("/image-analysis/{filename}")
 async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
@@ -402,10 +400,9 @@ async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
                 content={"error": f"No analysis found for image: {filename}"}
             )
             
-        return JSONResponse(content={
-            "filename": filename,
-            "analysis": analysis
-        })
+        # Return the analysis directly instead of nesting it under an "analysis" key
+        # This matches what the frontend expects
+        return JSONResponse(content=analysis)
         
     except Exception as e:
         logger.error(f"Error retrieving analysis for {filename}: {e}")
@@ -610,85 +607,49 @@ async def upload_image(
         finally:
             await file.close()
             
-        # Extract metadata
-        metadata = extract_image_metadata(file_path)
-        
-        # Run analysis
+        # Use the new analyze_image_with_session method which handles duplicates
         try:
-            analysis = await analyzer.analyze_image(str(file_path))
+            # This will either analyze the image or return the ID of an existing image
+            image_id = await analyzer.analyze_image_with_session(file_path, db)
+            
+            # Get the analysis results from the database
+            analysis = await db_service.get_image_analysis(image_id)
+            
+            if not analysis:
+                logger.error(f"Failed to retrieve analysis for image ID {image_id}")
+                analysis = {
+                    "faces": [],
+                    "embeddings": [],
+                    "objects": [],
+                    "text_recognition": {"text_detected": False, "text_blocks": []},
+                    "scene_classification": None
+                }
+            
+            return UploadResponse(
+                filename=filename,
+                analysis=analysis,
+                cached=False
+            )
+            
         except Exception as e:
             logger.error(f"Error analyzing image {file_path}: {str(e)}")
             analysis = {
                 "faces": [],
+                "embeddings": [],
                 "objects": [],
                 "text_recognition": {"text_detected": False, "text_blocks": []},
-                "scene_classification": None,
-                "embedding": None
+                "scene_classification": None
             }
-        
-        # Prepare image data for database
-        image_data = {
-            "filename": filename,
-            "dimensions": metadata.get("dimensions"),
-            "format": metadata.get("format"),
-            "file_size": metadata.get("file_size"),
-            "date_taken": metadata.get("date_taken"),
-            "latitude": metadata.get("latitude"),
-            "longitude": metadata.get("longitude"),
-        }
-        
-        # Extract EXIF data for separate parameter
-        exif_data = {
-            "camera_make": metadata.get("camera_make"),
-            "camera_model": metadata.get("camera_model"),
-            "focal_length": metadata.get("focal_length"),
-            "exposure_time": metadata.get("exposure_time"),
-            "f_number": metadata.get("f_number"),
-            "iso": metadata.get("iso")
-        }
-        
-        # Add analysis data to image_data
-        if "faces" in analysis:
-            image_data["faces"] = analysis["faces"]
-        if "objects" in analysis:
-            image_data["objects"] = analysis["objects"]
-        if "text_recognition" in analysis:
-            image_data["text_recognition"] = analysis["text_recognition"]
-        if "scene_classification" in analysis:
-            image_data["scene_classification"] = analysis["scene_classification"]
-        if "embedding" in analysis:
-            image_data["embedding"] = analysis["embedding"]
-        
-        # CRITICAL: Remove any EXIF fields from image_data to prevent the 'camera_make' error
-        exif_fields = ["camera_make", "camera_model", "focal_length", "exposure_time", "f_number", "iso"]
-        for field in exif_fields:
-            if field in image_data:
-                del image_data[field]
-                
-        # If analysis contains metadata with EXIF data, make sure it doesn't get into image_data
-        if "metadata" in analysis and isinstance(analysis["metadata"], dict):
-            for field in exif_fields:
-                if field in analysis["metadata"]:
-                    # Don't add these fields to image_data
-                    pass
-                
-        saved_image = await db_service.save_image_analysis(image_data, exif_data)
-        
-        if not saved_image:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to save image analysis"
-            )
             
-        return UploadResponse(
-            filename=filename,
-            analysis=analysis,
-            cached=False
-        )
+            return UploadResponse(
+                filename=filename,
+                analysis=analysis,
+                cached=False
+            )
         
     except Exception as e:
         logger.error(f"Error processing upload: {str(e)}")
-        if file_path.exists():
+        if 'file_path' in locals() and file_path.exists():
             file_path.unlink()  # Clean up file if analysis failed
         raise HTTPException(
             status_code=500,

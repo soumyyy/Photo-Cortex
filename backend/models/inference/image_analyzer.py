@@ -197,48 +197,114 @@ class ImageAnalyzer:
         Use analyze_image_with_session for FastAPI endpoints.
         """
         try:
-            # Read the image
+            # Ensure image path is absolute
             image_path = Path(image_path).resolve()
-            image = cv2.imread(str(image_path))
-            if image is None:
-                raise ValueError(f"Could not read image at {image_path}")
+            if not image_path.exists():
+                raise ValueError(f"Image file not found: {image_path}")
+            
+            # Create a new session
+            async with get_db() as session:
+                # Use the new method with session handling
+                image_id = await self.analyze_image_with_session(image_path, session)
                 
-            # Extract metadata (synchronous operation)
-            metadata = self._extract_metadata(image_path)
-
-            # Run all analyses synchronously
-            text_analysis = self.text_recognizer.detect_text(image)
-            face_analysis = self.face_detector.detect_faces(image)
-            object_analysis = self.object_detector.detect_objects(image)
-            scene_analysis = self.scene_classifier.classify_scene_combined(image)
-            clip_embedding = self.clip_encoder.encode_image(image)
-            
-            # Return the complete analysis data
-            return {
-                "faces": face_analysis.get("faces", []),
-                "objects": object_analysis.get("objects", []),
-                "text_recognition": text_analysis,
-                "scene_classification": scene_analysis,
-                "embedding": clip_embedding,
-                "metadata": {
-                    "dimensions": metadata.get("dimensions"),
-                    "format": metadata.get("format"),
-                    "file_size": metadata.get("file_size"),
-                    "date_taken": metadata.get("date_taken"),
-                    "gps": metadata.get("gps")
-                },
-                "exif": metadata.get("exif", {})  # Keep EXIF data separate from metadata
-            }
-            
+                # Query the database to get the full analysis
+                query = select(Image).options(
+                    joinedload(Image.face_detections),
+                    joinedload(Image.object_detections),
+                    joinedload(Image.text_detections),
+                    joinedload(Image.scene_classifications),
+                    joinedload(Image.exif_metadata)
+                ).where(Image.id == image_id)
+                
+                result = await session.execute(query)
+                image = result.unique().scalar_one_or_none()
+                
+                if not image:
+                    logger.error(f"Failed to retrieve image with ID {image_id}")
+                    return {
+                        "faces": [],
+                        "embeddings": [],
+                        "objects": [],
+                        "text_recognition": {"text_detected": False, "text_blocks": []},
+                        "scene_classification": {"scene_type": None, "confidence": 0}
+                    }
+                
+                # Format the results
+                faces_data = []
+                embeddings_data = []
+                
+                for face in image.face_detections:
+                    face_data = {
+                        "bbox": face.bounding_box,
+                        "score": face.confidence,
+                        "landmarks": face.landmarks
+                    }
+                    faces_data.append(face_data)
+                    
+                    if face.embedding is not None:
+                        embeddings_data.append(face.embedding)
+                
+                # Build metadata dictionary
+                metadata = {
+                    "dimensions": image.dimensions,
+                    "format": image.format,
+                    "file_size": str(image.file_size),
+                    "date_taken": image.date_taken.isoformat() if image.date_taken else None,
+                    "gps": {
+                        "latitude": float(image.latitude),
+                        "longitude": float(image.longitude)
+                    } if image.latitude is not None and image.longitude is not None else None
+                }
+                
+                # Keep EXIF data separate from metadata
+                exif_data = {}
+                if image.exif_metadata:
+                    exif_data = {
+                        "camera_make": image.exif_metadata.camera_make,
+                        "camera_model": image.exif_metadata.camera_model,
+                        "focal_length": image.exif_metadata.focal_length,
+                        "exposure_time": image.exif_metadata.exposure_time,
+                        "f_number": image.exif_metadata.f_number,
+                        "iso": image.exif_metadata.iso
+                    }
+                
+                # Build the response
+                return {
+                    "filename": image.filename,
+                    "metadata": metadata,
+                    "exif": exif_data,
+                    "faces": faces_data,
+                    "embeddings": embeddings_data,
+                    "objects": [obj.label for obj in image.object_detections],
+                    "text_recognition": {
+                        "text_detected": len(image.text_detections) > 0,
+                        "text_blocks": [
+                            {
+                                "text": text.text,
+                                "confidence": text.confidence,
+                                "bbox": text.bounding_box
+                            } for text in image.text_detections
+                        ]
+                    },
+                    "scene_classification": next(
+                        (
+                            {
+                                "scene_type": scene.scene_type,
+                                "confidence": scene.confidence
+                            } for scene in image.scene_classifications
+                        ),
+                        {"scene_type": None, "confidence": 0}
+                    )
+                }
+                
         except Exception as e:
-            logger.error(f"Error analyzing image {image_path}: {str(e)}")
-            # Return empty analysis to avoid breaking the upload flow
+            logger.error(f"Error analyzing image: {str(e)}")
             return {
                 "faces": [],
+                "embeddings": [],
                 "objects": [],
                 "text_recognition": {"text_detected": False, "text_blocks": []},
                 "scene_classification": {"scene_type": None, "confidence": 0},
-                "embedding": None,
                 "metadata": {},
                 "exif": {}
             }
@@ -316,7 +382,7 @@ class ImageAnalyzer:
             result["exif"] = exif_metadata
             
             return result
-
+            
         except Exception as e:
             logger.error(f"Error opening image for metadata: {str(e)}")
             return {"exif": {}}

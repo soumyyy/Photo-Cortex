@@ -223,18 +223,33 @@ class DatabaseService:
                             "iso": image.exif_metadata.iso
                         }
 
+                    # Format face detections to match the structure expected by the frontend
+                    faces_data = []
+                    embeddings_data = []
+                    
+                    for face in face_detections:
+                        # Create the face data structure
+                        face_data = {
+                            "bbox": face.bounding_box,
+                            "score": face.confidence,  # Renamed from confidence to score for frontend consistency
+                            "attributes": {
+                                "landmarks": face.landmarks
+                            }
+                        }
+                        
+                        # Add face to the faces array
+                        faces_data.append(face_data)
+                        
+                        # Add embedding to the embeddings array if it exists
+                        if hasattr(face, 'embedding') and face.embedding is not None:
+                            embeddings_data.append(face.embedding)
+
                     return {
                         "filename": image.filename,
                         "metadata": metadata,
                         "exif": exif_data,  
-                        "faces": [
-                            {
-                                "embedding": face.embedding,
-                                "bbox": face.bounding_box,
-                                "landmarks": face.landmarks,
-                                "similarity_score": face.similarity_score
-                            } for face in face_detections
-                        ],
+                        "faces": faces_data,
+                        "embeddings": embeddings_data,  # Add embeddings as a separate array
                         "objects": [obj.label for obj in object_detections],
                         "text_recognition": {
                             "text_detected": True,
