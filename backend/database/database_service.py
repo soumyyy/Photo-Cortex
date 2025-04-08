@@ -180,6 +180,7 @@ class DatabaseService:
                     image = result.unique().scalar_one_or_none()
 
                     if not image:
+                        logger.info(f"No image found with ID {image_id}")
                         return None
 
                     # Get all related data
@@ -198,6 +199,8 @@ class DatabaseService:
                     face_detections = list(faces.scalars().all())
                     object_detections = list(objects.scalars().all())
                     scene_classifications = list(scenes.scalars().all())
+                    
+                    logger.info(f"Retrieved analysis for image '{image.filename}': {len(face_detections)} faces, {len(object_detections)} objects, {len(text_blocks)} text blocks")
 
                     # Build metadata dictionary
                     metadata = {
@@ -244,23 +247,61 @@ class DatabaseService:
                         if hasattr(face, 'embedding') and face.embedding is not None:
                             embeddings_data.append(face.embedding)
 
+                    # Format text blocks to match the frontend's expected structure
+                    text_blocks_data = []
+                    raw_text = ""
+                    total_confidence = 0
+                    
+                    for text in text_blocks:
+                        # Convert bounding box from array to object format
+                        bbox_obj = {
+                            "x_min": text.bounding_box[0],
+                            "y_min": text.bounding_box[1],
+                            "x_max": text.bounding_box[2],
+                            "y_max": text.bounding_box[3]
+                        } if len(text.bounding_box) >= 4 else {
+                            "x_min": 0, "y_min": 0, "x_max": 0, "y_max": 0
+                        }
+                        
+                        text_blocks_data.append({
+                            "text": text.text,
+                            "confidence": text.confidence,
+                            "bbox": bbox_obj
+                        })
+                        
+                        # Accumulate raw text and confidence
+                        raw_text += text.text + " "
+                        total_confidence += text.confidence
+                    
+                    # Calculate average confidence if there are text blocks
+                    if text_blocks:
+                        total_confidence /= len(text_blocks)
+                    
+                    # Text recognition data with all required fields
+                    text_recognition_data = {
+                        "text_detected": len(text_blocks) > 0,
+                        "text_blocks": text_blocks_data,
+                        "total_confidence": total_confidence,
+                        "categories": [],  # Default empty categories
+                        "raw_text": raw_text.strip(),
+                        "language": "en"  # Default language
+                    } if text_blocks else {
+                        "text_detected": False,
+                        "text_blocks": [],
+                        "total_confidence": 0,
+                        "categories": [],
+                        "raw_text": "",
+                        "language": ""
+                    }
+
                     return {
                         "filename": image.filename,
                         "metadata": metadata,
                         "exif": exif_data,  
                         "faces": faces_data,
-                        "embeddings": embeddings_data,  # Add embeddings as a separate array
+                        "embeddings": embeddings_data,
                         "objects": [obj.label for obj in object_detections],
-                        "text_recognition": {
-                            "text_detected": True,
-                            "text_blocks": [
-                                {
-                                    "text": text.text,
-                                    "confidence": text.confidence,
-                                    "bbox": text.bounding_box
-                                } for text in text_blocks
-                            ]
-                        } if text_blocks else {"text_detected": False, "text_blocks": []},
+                        "text_recognition": text_recognition_data,
                         "scene_classification": next(
                             (
                                 {

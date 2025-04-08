@@ -47,12 +47,47 @@ for handler in logging.root.handlers:
     if isinstance(handler, logging.FileHandler):
         handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
-# Set higher log level for most modules to reduce noise
-logging.getLogger('models.inference').setLevel(logging.WARNING)
-logging.getLogger('uvicorn').setLevel(logging.WARNING)
-logging.getLogger('fastapi').setLevel(logging.WARNING)
+# Completely silence SQLAlchemy logging for console output
+logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)  # Most aggressive setting
+logging.getLogger('sqlalchemy.engine').setLevel(logging.CRITICAL)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.CRITICAL)
+logging.getLogger('sqlalchemy.dialects').setLevel(logging.CRITICAL)
+logging.getLogger('sqlalchemy.orm').setLevel(logging.CRITICAL)
+
+# Silence other verbose loggers
+logging.getLogger('uvicorn').setLevel(logging.ERROR)
+logging.getLogger('fastapi').setLevel(logging.ERROR)
+logging.getLogger('models').setLevel(logging.WARNING)
+
+# Create a custom filter for our application logs
+class HumanReadableFilter(logging.Filter):
+    def filter(self, record):
+        # Block all SQLAlchemy logs
+        if record.name.startswith('sqlalchemy'):
+            return False
+        
+        # Allow only specific log messages that are human-readable summaries
+        if hasattr(record, 'human_readable') and record.human_readable:
+            return True
+            
+        # Block most other logs
+        if record.levelno < logging.WARNING:
+            return False
+            
+        return True
+
+# Apply the filter to the console handler
+for handler in logging.root.handlers:
+    if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+        handler.addFilter(HumanReadableFilter())
 
 logger = logging.getLogger(__name__)
+
+# Helper function for human-readable logs
+def log_human_readable(message):
+    """Log a human-readable message that won't be filtered"""
+    extra = {'human_readable': True}
+    logger.info(message, extra=extra)
 
 def convert_to_serializable(value):
     """Convert EXIF values to JSON serializable format."""
@@ -158,7 +193,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
 # Initialize the analyzer only once
 from models.inference import ImageAnalyzer
 analyzer = ImageAnalyzer()
-logger.info("PhotoCortex models loaded and ready")
+log_human_readable("PhotoCortex models loaded and ready")
 
 app = FastAPI()
 
@@ -610,7 +645,32 @@ async def upload_image(
         # Use the new analyze_image_with_session method which handles duplicates
         try:
             # This will either analyze the image or return the ID of an existing image
-            image_id = await analyzer.analyze_image_with_session(file_path, db)
+            result = await analyzer.analyze_image_with_session(file_path, db)
+            
+            # Check if result is an error dictionary or an image ID
+            if isinstance(result, dict) and "error" in result:
+                logger.error(f"Error analyzing image: {result['error']}")
+                analysis = {
+                    "filename": filename,
+                    "faces": [],
+                    "embeddings": [],
+                    "objects": [],
+                    "text_recognition": {
+                        "text_detected": False, 
+                        "text_blocks": [],
+                        "total_confidence": 0,
+                        "categories": [],
+                        "raw_text": "",
+                        "language": ""
+                    },
+                    "scene_classification": None,
+                    "metadata": {},
+                    "exif": {}
+                }
+                return analysis
+            
+            # If we got here, result is an image ID
+            image_id = result
             
             # Get the analysis results from the database
             analysis = await db_service.get_image_analysis(image_id)
@@ -703,22 +763,6 @@ async def scan_text(
     except Exception as e:
         logger.error(f"Error scanning text: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred during text scanning")
-
-# Custom filter to remove unnecessary log messages
-class LogFilter(logging.Filter):
-    def filter(self, record):
-        # Allow specific initialization messages we want to see
-        if record.name == "__main__" and "ready" in record.getMessage().lower():
-            return True
-        # Filter out most other messages
-        if record.levelno == logging.INFO:
-            return False
-        return True
-
-# Apply filter to console handler only
-for handler in logging.root.handlers:
-    if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
-        handler.addFilter(LogFilter())
 
 if __name__ == "__main__":
     import uvicorn
