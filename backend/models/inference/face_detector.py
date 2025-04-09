@@ -125,12 +125,13 @@ class FaceDetector:
             logger.error(f"Error in eye status calculation: {str(e)}")
             return {"status": "unknown", "left_ear": 0.0, "right_ear": 0.0}
 
-    def detect_faces(self, image: np.ndarray, image_name: str = "") -> Dict[str, Any]:
+    def detect_faces(self, image: np.ndarray, image_name: str = "", db_session=None) -> Dict[str, Any]:
         """
         Detect faces in an image and extract embeddings.
         Args:
             image: numpy array of shape (H, W, 3) in BGR format
             image_name: name of the image file
+            db_session: optional database session for persisting identities
         Returns:
             Dictionary containing face detections and embeddings
         """
@@ -224,9 +225,9 @@ class FaceDetector:
                     detections.append(detection)
                     embeddings.append(embedding.tolist())
                     
-                    # Update face database with correct path
+                    # Update face database with correct path and db_session
                     if image_name:
-                        self._update_face_db(embedding, image_name, face_relative_path)
+                        self._update_face_db(embedding, image_name, face_relative_path, db_session)
                 except Exception as e:
                     logger.error(f"Error processing face {idx}: {str(e)}")
             return {
@@ -274,8 +275,8 @@ class FaceDetector:
             logger.error(f"Error saving face crop: {str(e)}")
             return None
 
-    def _update_face_db(self, new_embedding: np.ndarray, image_name: str, face_image: str):
-        """Update face database with new embedding."""
+    def _update_face_db(self, new_embedding: np.ndarray, image_name: str, face_image: str, db_session=None):
+        """Update face database with new embedding and persist to SQL database."""
         try:
             if new_embedding.shape[0] != 512:
                 logger.warning(f"Invalid embedding shape: {new_embedding.shape}")
@@ -321,7 +322,78 @@ class FaceDetector:
                     'images': {image_name},
                     'face_images': {face_image}
                 }
-                
+            
+            # Persist to database if session is provided
+            if db_session:
+                try:
+                    from sqlalchemy import func
+                    from database.models import FaceIdentity, FaceDetection, Image
+                    
+                    # Get the image ID
+                    image = db_session.query(Image).filter(Image.filename == image_name).first()
+                    if not image:
+                        logger.warning(f"Image {image_name} not found in database")
+                        return
+                    
+                    # Get the face detection record
+                    face_detection = db_session.query(FaceDetection).filter(
+                        FaceDetection.image_id == image.id,
+                        FaceDetection.face_image == face_image
+                    ).first()
+                    
+                    if not face_detection:
+                        logger.warning(f"Face detection for {face_image} not found in database")
+                        return
+                    
+                    # Check if we have a matching identity
+                    if found_match:
+                        # Try to find existing identity with similar embedding
+                        existing_embedding_array = np.frombuffer(best_embedding, dtype=np.float32)
+                        
+                        # Get existing identities
+                        existing_identities = db_session.query(FaceIdentity).all()
+                        best_identity = None
+                        best_identity_similarity = 0
+                        
+                        for identity in existing_identities:
+                            identity_embedding = np.array(identity.reference_embedding)
+                            similarity = np.dot(new_embedding, identity_embedding) / (
+                                np.linalg.norm(new_embedding) * np.linalg.norm(identity_embedding)
+                            )
+                            
+                            if similarity > self.similarity_threshold and similarity > best_identity_similarity:
+                                best_identity_similarity = similarity
+                                best_identity = identity
+                        
+                        if best_identity:
+                            # Use existing identity
+                            face_detection.identity_id = best_identity.id
+                            logger.info(f"Assigned face in {image_name} to existing identity {best_identity.id}")
+                        else:
+                            # Create new identity with the reference embedding
+                            new_identity = FaceIdentity(
+                                label=f"Person_{len(self.face_db)}",
+                                reference_embedding=existing_embedding_array.tolist()
+                            )
+                            db_session.add(new_identity)
+                            db_session.flush()
+                            face_detection.identity_id = new_identity.id
+                            logger.info(f"Created new identity {new_identity.id} for face in {image_name}")
+                    else:
+                        # Create new identity with the new embedding
+                        new_identity = FaceIdentity(
+                            label=f"Person_{len(self.face_db)}",
+                            reference_embedding=new_embedding.tolist()
+                        )
+                        db_session.add(new_identity)
+                        db_session.flush()
+                        face_detection.identity_id = new_identity.id
+                        logger.info(f"Created new identity {new_identity.id} for face in {image_name}")
+                    
+                    db_session.flush()
+                except Exception as e:
+                    logger.error(f"Error persisting face identity to database: {e}")
+            
         except Exception as e:
             logger.error(f"Error updating face database: {e}")
 

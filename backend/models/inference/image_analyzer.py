@@ -64,7 +64,8 @@ class ImageAnalyzer:
 
             # Run all analyses synchronously since they don't have async implementations
             text_analysis = self.text_recognizer.detect_text(image)
-            face_analysis = self.face_detector.detect_faces(image, str(image_path.name))
+            # Pass the session to the face detector for identity matching
+            face_analysis = self.face_detector.detect_faces(image, str(image_path.name), session)
             object_analysis = self.object_detector.detect_objects(image)
             scene_analysis = self.scene_classifier.classify_scene_combined(image)
             clip_embedding = self.clip_encoder.encode_image(image)
@@ -135,21 +136,17 @@ class ImageAnalyzer:
                     
                     # Create face detection record with proper validation
                     try:
-                        # Extract attributes from the face data
-                        attributes = face.get("attributes", {})
-                        
                         face_detection = FaceDetection(
                             image_id=db_image.id,
-                            bounding_box=face["bbox"],
-                            confidence=face["score"],  # Changed from "confidence" to "score"
-                            embedding=embedding,
-                            landmarks=face.get("landmarks"),
-                            similarity_score=None  # Will be set during identity matching
+                            confidence=float(face.get('score', 0.0)),  # Store detection confidence
+                            embedding=embedding.tolist(),
+                            bounding_box=face.get('bbox'),
+                            landmarks=face.get('landmarks'),
+                            similarity_score=0.0  # Will be updated during identity assignment
                         )
                         session.add(face_detection)
                     except Exception as e:
-                        logger.error(f"Error creating face detection: {str(e)}")
-                        logger.error(f"Face data: {face}")
+                        logger.error(f"Error saving face detection: {e}")
                         continue
 
             # Save object detections

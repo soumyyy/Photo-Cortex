@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface UniqueFace {
   id: number;
-  images: string[];
-  face_images: string[];
+  label: string;
+  images: string[];  // Array of original image paths
+  face_images: number[];  // Array of face IDs (changed from string[])
 }
 
 interface Config {
@@ -18,6 +20,9 @@ export default function PeopleGrid() {
   const [loading, setLoading] = useState(true);
   const [selectedPerson, setSelectedPerson] = useState<UniqueFace | null>(null);
   const [config, setConfig] = useState<Config>({ API_BASE_URL: 'http://localhost:8000' });
+  const [editingPerson, setEditingPerson] = useState<number | null>(null);
+  const [newName, setNewName] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch config from backend
@@ -46,6 +51,7 @@ export default function PeopleGrid() {
         console.log('Updated unique faces state:', data.unique_faces?.length || 0, 'faces');
       } catch (error) {
         console.error('Error fetching unique faces:', error);
+        setError('Failed to load people data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -54,12 +60,61 @@ export default function PeopleGrid() {
     fetchUniqueFaces();
   }, [config.API_BASE_URL]);
 
-  // Helper function to get face image URL
-  const getFaceImageUrl = (filename: string) => {
-    const cleanFilename = filename.replace(/^\/+/, '');
-    const url = `${config.API_BASE_URL}/${cleanFilename}`;
-    console.log('Face image URL:', url);
-    return url;
+  const getFaceImageUrl = (faceIdentifier: string | number) => {
+    const id = faceIdentifier.toString();
+    // If it's already a full path (legacy case), use as-is
+    if (id.includes('/')) {
+      return `${config.API_BASE_URL}/${id.replace(/^\//, '')}`;
+    }
+    // Otherwise assume it's a face ID and use new format
+    return `${config.API_BASE_URL}/images/faces/${id}`;
+  };
+
+  // Function to update person name
+  const updatePersonName = async (personId: number, name: string) => {
+    try {
+      setError(null);
+      const response = await fetch(`${config.API_BASE_URL}/face-identity/${personId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ label: name }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update name');
+      }
+      
+      const data = await response.json();
+      
+      // Update local state
+      setUniqueFaces(prevFaces => 
+        prevFaces.map(face => 
+          face.id === personId ? { ...face, label: name } : face
+        )
+      );
+      
+      // If the selected person is being edited, update that too
+      if (selectedPerson && selectedPerson.id === personId) {
+        setSelectedPerson({ ...selectedPerson, label: name });
+      }
+      
+      setEditingPerson(null);
+      setNewName("");
+    } catch (error) {
+      console.error('Error updating name:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update name');
+    }
+  };
+
+  // Function to handle form submission
+  const handleNameSubmit = (e: React.FormEvent, personId: number) => {
+    e.preventDefault();
+    if (newName.trim()) {
+      updatePersonName(personId, newName.trim());
+    }
   };
 
   if (loading) {
@@ -70,6 +125,20 @@ export default function PeopleGrid() {
           <div className="w-12 h-12 rounded-full border-2 border-t-white/40 animate-spin" />
         </div>
         <span className="ml-4 text-white/60">Loading faces...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] py-12 text-center space-y-4">
+        <p className="text-lg text-red-400">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -91,14 +160,18 @@ export default function PeopleGrid() {
           <div
             key={person.id}
             className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
-            onClick={() => setSelectedPerson(person)}
+            onClick={() => {
+              if (editingPerson !== person.id) {
+                setSelectedPerson(person);
+              }
+            }}
           >
             {/* Show the first face cutout for this person */}
             <div className="aspect-square w-full">
               <div className="relative w-full h-full">
                 <Image
-                  src={getFaceImageUrl(person.face_images[0])}
-                  alt={`Person ${person.id}`}
+                  src={getFaceImageUrl(person.face_images[0].toString())}
+                  alt={person.label || `Person ${person.id}`}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
@@ -108,26 +181,70 @@ export default function PeopleGrid() {
             </div>
             
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <p className="text-sm text-white/90">
-                  {person.images.length} photo{person.images.length !== 1 ? 's' : ''}
-                </p>
+                {editingPerson === person.id ? (
+                  <form 
+                    onSubmit={(e) => handleNameSubmit(e, person.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center space-x-2"
+                  >
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="bg-white/20 rounded px-2 py-1 text-white text-sm w-full outline-none"
+                      placeholder="Enter name"
+                      autoFocus
+                    />
+                    <button 
+                      type="submit" 
+                      className="p-1 bg-white/20 rounded-full hover:bg-white/30"
+                    >
+                      <CheckIcon className="w-4 h-4 text-white" />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPerson(null);
+                        setNewName("");
+                      }}
+                      className="p-1 bg-white/20 rounded-full hover:bg-white/30"
+                    >
+                      <XMarkIcon className="w-4 h-4 text-white" />
+                    </button>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-medium truncate">
+                      {person.label || `Person ${person.id}`}
+                    </h3>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPerson(person.id);
+                        setNewName(person.label || "");
+                      }}
+                      className="p-1 text-white/60 hover:text-white/90 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <p className="text-white/60 text-sm mt-1">{person.images.length} photos</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal for showing all images of a person */}
+      {/* Modal for selected person */}
       {selectedPerson && (
-        <div 
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedPerson(null)}
-        >
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div 
-            className="bg-[#0a0a0a] rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-white/[0.05]"
-            onClick={e => e.stopPropagation()}
+            className="bg-[#0a0a0a] rounded-2xl overflow-hidden max-w-6xl w-full max-h-[90vh] border border-white/[0.05] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col h-full">
               {/* Header */}
@@ -135,14 +252,59 @@ export default function PeopleGrid() {
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden">
                     <Image
-                      src={getFaceImageUrl(selectedPerson.face_images[0])}
-                      alt={`Person ${selectedPerson.id}`}
+                      src={getFaceImageUrl(selectedPerson.face_images[0].toString())}
+                      alt={selectedPerson.label || `Person ${selectedPerson.id}`}
                       fill
                       className="object-cover"
                     />
                   </div>
                   <div>
-                    <h2 className="text-lg font-medium text-white/90">Person {selectedPerson.id}</h2>
+                    {editingPerson === selectedPerson.id ? (
+                      <form 
+                        onSubmit={(e) => handleNameSubmit(e, selectedPerson.id)}
+                        className="flex items-center space-x-2"
+                      >
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="bg-white/10 rounded px-2 py-1 text-white text-sm outline-none"
+                          placeholder="Enter name"
+                          autoFocus
+                        />
+                        <button 
+                          type="submit" 
+                          className="p-1 bg-white/10 rounded-full hover:bg-white/20"
+                        >
+                          <CheckIcon className="w-4 h-4 text-white" />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setEditingPerson(null);
+                            setNewName("");
+                          }}
+                          className="p-1 bg-white/10 rounded-full hover:bg-white/20"
+                        >
+                          <XMarkIcon className="w-4 h-4 text-white" />
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="flex items-center">
+                        <h2 className="text-lg font-medium text-white/90 mr-2">
+                          {selectedPerson.label || `Person ${selectedPerson.id}`}
+                        </h2>
+                        <button 
+                          onClick={() => {
+                            setEditingPerson(selectedPerson.id);
+                            setNewName(selectedPerson.label || "");
+                          }}
+                          className="p-1 text-white/60 hover:text-white/90 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <p className="text-sm text-white/60">Found in {selectedPerson.images.length} photos</p>
                   </div>
                 </div>
@@ -150,9 +312,7 @@ export default function PeopleGrid() {
                   onClick={() => setSelectedPerson(null)}
                   className="p-2 hover:bg-white/[0.05] rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <XMarkIcon className="w-5 h-5 text-white/60" />
                 </button>
               </div>
 
@@ -168,7 +328,7 @@ export default function PeopleGrid() {
                         className="aspect-square relative rounded-lg overflow-hidden bg-[#0a0a0a] border border-white/[0.05]"
                       >
                         <Image
-                          src={getFaceImageUrl(faceImage)}
+                          src={getFaceImageUrl(faceImage.toString())}
                           alt={`Face ${index + 1}`}
                           fill
                           className="object-cover"
