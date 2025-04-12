@@ -49,3 +49,4 @@ backend/images/**
 backend/image_dir/**
 backend/models/weights/
 backend/models/inference/__pycache__
+backend/app.log
