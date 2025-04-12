@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import logging
 import cv2
 from insightface.app import FaceAnalysis
@@ -8,6 +8,9 @@ from pathlib import Path
 import warnings
 import io
 from contextlib import redirect_stdout, redirect_stderr
+import asyncio
+from sqlalchemy import select, func
+from database.models import FaceIdentity, FaceDetection, Image
 
 # Filter the specific warning from insightface
 warnings.filterwarnings('ignore', category=FutureWarning, module='insightface.utils.transform')
@@ -27,15 +30,15 @@ class FaceDetector:
                 )
                 self.app.prepare(ctx_id=-1, det_size=(640, 640))
             
-            # Dictionary to store face embeddings and their associated images
-            self.face_db = {}
+            # Increase similarity threshold for stricter face matching
             self.similarity_threshold = 0.5
             
-            # Create faces directory
-            self.faces_dir = Path("./image/faces")
+            # Create faces directory with absolute path
+            backend_dir = Path(__file__).resolve().parent.parent.parent
+            self.faces_dir = backend_dir / "image" / "faces"
             self.faces_dir.mkdir(exist_ok=True, parents=True)
             
-            logger.info("Face detector initialized successfully")
+            logger.info(f"Face detector initialized with faces directory: {self.faces_dir}")
         except Exception as e:
             logger.error(f"Failed to initialize face detector: {str(e)}")
             self.app = None
@@ -125,133 +128,153 @@ class FaceDetector:
             logger.error(f"Error in eye status calculation: {str(e)}")
             return {"status": "unknown", "left_ear": 0.0, "right_ear": 0.0}
 
-    def detect_faces(self, image: np.ndarray, image_name: str = "", db_session=None) -> Dict[str, Any]:
-        """
-        Detect faces in an image and extract embeddings.
-        Args:
-            image: numpy array of shape (H, W, 3) in BGR format
-            image_name: name of the image file
-            db_session: optional database session for persisting identities
-        Returns:
-            Dictionary containing face detections and embeddings
-        """
-        if self.app is None:
-            return {"faces": [], "embeddings": []}
-
+    async def _update_face_db(self, new_embedding: np.ndarray, image_id: int, bbox: np.ndarray, landmarks: np.ndarray, confidence: float, db_session=None) -> Tuple[int, int]:
+        """Update face database with new embedding and persist to SQL database.
+        Returns a tuple of (identity_id, detection_id) if a match is found or a new identity is created."""
         try:
-            # Basic image validation
-            if image is None or not isinstance(image, np.ndarray):
-                return {"faces": [], "embeddings": []}
+            if db_session is None:
+                logger.error("No database session provided")
+                return None, None
 
-            if image.size == 0:
-                return {"faces": [], "embeddings": []}
+            # Query existing face identities
+            query = select(FaceIdentity)
+            result = await db_session.execute(query)
+            identities = result.scalars().all()
 
-            # Ensure image is in BGR format (OpenCV default)
-            if len(image.shape) == 2:
-                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            elif image.shape[2] == 4:
-                image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+            best_match = None
+            best_similarity = 0.0
 
-            # Get face detections with embeddings
+            # Compare with existing identities
+            for identity in identities:
+                identity_embedding = np.array(identity.reference_embedding)
+                similarity = self._compute_similarity(new_embedding, identity_embedding)
+                
+                if similarity > self.similarity_threshold and similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = identity
+                    logger.debug(f"Found match with similarity {similarity:.3f} for face in image {image_id}")
+
+            if best_match:
+                # Use existing identity
+                identity_id = best_match.id
+                logger.info(f"Matched face in image {image_id} to existing identity {identity_id} with similarity {best_similarity:.3f}")
+            else:
+                # Count existing identities for new label
+                count_query = select(func.count(FaceIdentity.id))
+                count_result = await db_session.execute(count_query)
+                existing_count = count_result.scalar() or 0
+
+                # Create new identity
+                new_identity = FaceIdentity(
+                    label=f"Person_{existing_count + 1}",
+                    reference_embedding=new_embedding.tolist()
+                )
+                db_session.add(new_identity)
+                await db_session.flush()
+                identity_id = new_identity.id
+                logger.info(f"Created new identity {identity_id} for face in image {image_id}")
+
+            # Create face detection with all required fields
+            detection = FaceDetection(
+                image_id=image_id,
+                identity_id=identity_id,
+                embedding=new_embedding.tolist(),
+                confidence=confidence,
+                bounding_box=bbox.tolist(),
+                landmarks=landmarks.tolist() if landmarks is not None else None
+            )
+            db_session.add(detection)
+            await db_session.flush()
+            
+            return identity_id, detection.id
+
+        except Exception as e:
+            logger.error(f"Error updating face database: {e}")
+            return None, None
+
+    async def detect_faces(self, image: np.ndarray, image_id: int, db_session=None) -> Dict:
+        """Detect faces in an image and extract embeddings."""
+        try:
+            if self.app is None:
+                return {"error": "Face detector not initialized"}
+
+            # Detect faces using InsightFace
             faces = self.app.get(image)
             
-            if faces is None or len(faces) == 0:
-                return {"faces": [], "embeddings": []}
+            if not faces:
+                return {
+                    "faces_detected": False,
+                    "face_count": 0,
+                    "faces": []
+                }
 
-            # Process each face
-            detections = []
-            embeddings = []
+            results = []
+            seen_embeddings = set()  # Track similar embeddings to avoid duplicates
             
-            for idx, face in enumerate(faces):
-                try:
-                    # Only include faces with high detection confidence
-                    if face.det_score < 0.5:
-                        continue
-                        
-                    bbox = face.bbox.astype(int).tolist()
-                    embedding = face.embedding
+            for face_idx, face in enumerate(faces):
+                # Skip if confidence is too low
+                if face.det_score < 0.5:
+                    continue
+                
+                # Get embedding as numpy array
+                embedding = face.embedding
+                embedding_bytes = embedding.tobytes()
+                
+                # Skip if too similar to previously seen face
+                if embedding_bytes in seen_embeddings:
+                    continue
+                seen_embeddings.add(embedding_bytes)
+                
+                # Calculate smile intensity and eye status
+                smile_intensity = self.calculate_smile_intensity(face.kps)
+                eye_status = self.calculate_eye_status(face.kps)
+                
+                # Update face database
+                identity_id, detection_id = await self._update_face_db(
+                    embedding,
+                    image_id,
+                    face.bbox,
+                    face.kps,
+                    float(face.det_score),
+                    db_session
+                )
+                
+                if detection_id is None:
+                    continue
                     
-                    # Skip if embedding is None or has wrong dimensions
-                    if embedding is None or embedding.shape[0] != 512:
-                        continue
-                    
-                    # Extract and save face cutout
-                    x1, y1, x2, y2 = [int(coord) for coord in bbox]
-                    # Add padding
-                    padding = 30
-                    h, w = image.shape[:2]
-                    x1 = max(0, x1 - padding)
-                    y1 = max(0, y1 - padding)
-                    x2 = min(w, x2 + padding)
-                    y2 = min(h, y2 + padding)
-                    
-                    face_img = image[y1:y2, x1:x2]
-                    face_filename = f"face_{Path(image_name).stem}_{idx}.jpg"
-                    face_path = self.faces_dir / face_filename
-                    cv2.imwrite(str(face_path), face_img)
-
-                    # Calculate facial attributes
-                    smile_score = self.calculate_smile_intensity(face.kps) if hasattr(face, 'kps') else 0.0
-                    
-                    # Classify age as young/old
-                    age_value = int(face.age) if hasattr(face, 'age') and face.age is not None else None
-                    age_category = "unknown"
-                    if age_value is not None:
-                        age_category = "young" if age_value < 40 else "old"
-                    
-                    gender = "male" if hasattr(face, 'gender') and face.gender == 1 else "female"
-                    eye_status = self.calculate_eye_status(face.kps) if hasattr(face, 'kps') else {"status": "unknown", "left_ear": 0.0, "right_ear": 0.0}
-                    
-                    # Update face path to use image/faces
-                    face_relative_path = f"image/faces/{face_filename}"
-                    
-                    detection = {
-                        'bbox': bbox,
-                        'score': float(face.det_score),
-                        'landmarks': face.kps.tolist() if hasattr(face, 'kps') else None,
-                        'face_image': face_relative_path,
-                        'attributes': {
-                            'age': age_category,
-                            'gender': gender,
-                            'smile_intensity': smile_score,
-                            'eye_status': eye_status["status"],
-                            'eye_metrics': {
-                                "left_ear": eye_status["left_ear"],
-                                "right_ear": eye_status["right_ear"]
-                            }
-                        }
+                # Save face crop only after we have the detection_id
+                face_id = self._save_face_crop(image, face.bbox, image_id, detection_id)
+                
+                results.append({
+                    "confidence": float(face.det_score),
+                    "embedding": face.embedding.tolist(),
+                    "bounding_box": face.bbox.tolist(),
+                    "landmarks": face.kps.tolist() if face.kps is not None else None,
+                    "identity_id": identity_id,
+                    "face_image": face_id,
+                    "attributes": {
+                        "smile_intensity": smile_intensity,
+                        "eye_status": eye_status
                     }
-                    
-                    detections.append(detection)
-                    embeddings.append(embedding.tolist())
-                    
-                    # Update face database with correct path and db_session
-                    if image_name:
-                        self._update_face_db(embedding, image_name, face_relative_path, db_session)
-                except Exception as e:
-                    logger.error(f"Error processing face {idx}: {str(e)}")
+                })
+
             return {
-                "faces": detections,
-                "embeddings": embeddings
+                "faces_detected": True,
+                "face_count": len(results),
+                "faces": results
             }
 
         except Exception as e:
-            if "No face detected" not in str(e):
-                logger.error(f"Error in face detection for {image_name}: {str(e)}")
-            return {"faces": [], "embeddings": []}
+            logger.error(f"Error in face detection: {e}")
+            return {
+                "error": str(e),
+                "faces_detected": False,
+                "face_count": 0,
+                "faces": []
+            }
 
-    def _save_face_crop(self, image: np.ndarray, bbox: np.ndarray, image_name: str, face_idx: int) -> str:
-        """Save a cropped face image and return its ID.
-        
-        Args:
-            image: Full image array
-            bbox: Bounding box coordinates [x1, y1, x2, y2]
-            image_name: Original image filename
-            face_idx: Index of the face in the image
-            
-        Returns:
-            Face ID string
-        """
+    def _save_face_crop(self, image: np.ndarray, bbox: np.ndarray, image_id: int, detection_id: int) -> str:
+        """Save a cropped face image and return its ID."""
         try:
             # Add padding to the bounding box
             padding = 30
@@ -262,140 +285,41 @@ class FaceDetector:
             x2 = min(w, x2 + padding)
             y2 = min(h, y2 + padding)
             
-            # Crop and save the face image
-            face_img = image[int(y1):int(y2), int(x1):int(x2)]
-            face_id = f"face_{Path(image_name).stem}_{face_idx}"
-            face_filename = f"{face_id}.jpg"
-            face_path = self.faces_dir / face_filename
+            # Ensure valid coordinates
+            if x1 >= x2 or y1 >= y2:
+                logger.error(f"Invalid bounding box after padding: [{x1}, {y1}, {x2}, {y2}]")
+                return None
             
-            cv2.imwrite(str(face_path), face_img)
+            # Crop and save face
+            face_img = image[int(y1):int(y2), int(x1):int(x2)]
+            if face_img.size == 0:
+                logger.error("Empty face crop")
+                return None
+            
+            # Convert RGB to BGR for OpenCV
+            face_img = cv2.cvtColor(face_img, cv2.COLOR_RGB2BGR)
+            
+            # Construct face image path
+            face_id = f"face_{image_id}_{detection_id}"
+            face_path = self.faces_dir / f"{face_id}.jpg"
+            
+            # Save the image with error checking
+            success = cv2.imwrite(str(face_path), face_img)
+            if not success:
+                logger.error(f"Failed to write face crop to {face_path}")
+                return None
+            
+            # Verify file was created
+            if not face_path.exists():
+                logger.error(f"Face crop file not found after saving: {face_path}")
+                return None
+            
+            logger.info(f"Successfully saved face crop to {face_path}")
             return face_id
             
         except Exception as e:
             logger.error(f"Error saving face crop: {str(e)}")
             return None
-
-    def _update_face_db(self, new_embedding: np.ndarray, image_name: str, face_image: str, db_session=None):
-        """Update face database with new embedding and persist to SQL database."""
-        try:
-            if new_embedding.shape[0] != 512:
-                logger.warning(f"Invalid embedding shape: {new_embedding.shape}")
-                return
-            
-            new_embedding_bytes = new_embedding.tobytes()
-            found_match = False
-            best_similarity = 0
-            best_embedding = None
-            
-            logger.debug(f"Processing face from {image_name}")
-            
-            # Create a list of items to avoid dictionary size change during iteration
-            face_db_items = list(self.face_db.items())
-            
-            for existing_embedding, data in face_db_items:
-                try:
-                    existing_embedding_array = np.frombuffer(existing_embedding, dtype=np.float32)
-                    similarity = np.dot(new_embedding, existing_embedding_array) / (
-                        np.linalg.norm(new_embedding) * np.linalg.norm(existing_embedding_array)
-                    )
-                    
-                    if similarity > self.similarity_threshold and similarity > best_similarity:
-                        best_similarity = similarity
-                        best_embedding = existing_embedding
-                        
-                except Exception as e:
-                    logger.error(f"Error comparing embeddings: {e}")
-                    continue
-            
-            if best_embedding:
-                if 'images' not in self.face_db[best_embedding]:
-                    self.face_db[best_embedding]['images'] = set()
-                if 'face_images' not in self.face_db[best_embedding]:
-                    self.face_db[best_embedding]['face_images'] = set()
-                self.face_db[best_embedding]['images'].add(image_name)
-                self.face_db[best_embedding]['face_images'].add(face_image)
-                found_match = True
-            
-            if not found_match:
-                logger.debug(f"Creating new face group for {image_name}")
-                self.face_db[new_embedding_bytes] = {
-                    'images': {image_name},
-                    'face_images': {face_image}
-                }
-            
-            # Persist to database if session is provided
-            if db_session:
-                try:
-                    from sqlalchemy import func
-                    from database.models import FaceIdentity, FaceDetection, Image
-                    
-                    # Get the image ID
-                    image = db_session.query(Image).filter(Image.filename == image_name).first()
-                    if not image:
-                        logger.warning(f"Image {image_name} not found in database")
-                        return
-                    
-                    # Get the face detection record
-                    face_detection = db_session.query(FaceDetection).filter(
-                        FaceDetection.image_id == image.id,
-                        FaceDetection.face_image == face_image
-                    ).first()
-                    
-                    if not face_detection:
-                        logger.warning(f"Face detection for {face_image} not found in database")
-                        return
-                    
-                    # Check if we have a matching identity
-                    if found_match:
-                        # Try to find existing identity with similar embedding
-                        existing_embedding_array = np.frombuffer(best_embedding, dtype=np.float32)
-                        
-                        # Get existing identities
-                        existing_identities = db_session.query(FaceIdentity).all()
-                        best_identity = None
-                        best_identity_similarity = 0
-                        
-                        for identity in existing_identities:
-                            identity_embedding = np.array(identity.reference_embedding)
-                            similarity = np.dot(new_embedding, identity_embedding) / (
-                                np.linalg.norm(new_embedding) * np.linalg.norm(identity_embedding)
-                            )
-                            
-                            if similarity > self.similarity_threshold and similarity > best_identity_similarity:
-                                best_identity_similarity = similarity
-                                best_identity = identity
-                        
-                        if best_identity:
-                            # Use existing identity
-                            face_detection.identity_id = best_identity.id
-                            logger.info(f"Assigned face in {image_name} to existing identity {best_identity.id}")
-                        else:
-                            # Create new identity with the reference embedding
-                            new_identity = FaceIdentity(
-                                label=f"Person_{len(self.face_db)}",
-                                reference_embedding=existing_embedding_array.tolist()
-                            )
-                            db_session.add(new_identity)
-                            db_session.flush()
-                            face_detection.identity_id = new_identity.id
-                            logger.info(f"Created new identity {new_identity.id} for face in {image_name}")
-                    else:
-                        # Create new identity with the new embedding
-                        new_identity = FaceIdentity(
-                            label=f"Person_{len(self.face_db)}",
-                            reference_embedding=new_embedding.tolist()
-                        )
-                        db_session.add(new_identity)
-                        db_session.flush()
-                        face_detection.identity_id = new_identity.id
-                        logger.info(f"Created new identity {new_identity.id} for face in {image_name}")
-                    
-                    db_session.flush()
-                except Exception as e:
-                    logger.error(f"Error persisting face identity to database: {e}")
-            
-        except Exception as e:
-            logger.error(f"Error updating face database: {e}")
 
     def _compute_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Compute cosine similarity between two embeddings."""
@@ -412,28 +336,3 @@ class FaceDetector:
             return float(np.dot(embedding1, embedding2) / (norm1 * norm2))
         except Exception:
             return 0.0
-
-    def get_unique_faces(self) -> list:
-        """Get list of unique faces with their associated images.
-        
-        Returns:
-            List of dictionaries containing:
-            - id: unique identifier for the face group
-            - images: list of image filenames containing this face
-            - face_images: list of cropped face image filenames
-        """
-        try:
-            logger.info(f"Face database size: {len(self.face_db)}")
-            unique_faces = []
-            for idx, (_, data) in enumerate(self.face_db.items()):
-                logger.info(f"Face group {idx}: {len(data['images'])} images, {len(data['face_images'])} face cutouts")
-                unique_faces.append({
-                    'id': idx,
-                    'images': list(data['images']),
-                    'face_images': list(data['face_images'])
-                })
-            logger.info(f"Returning {len(unique_faces)} unique faces")
-            return unique_faces
-        except Exception as e:
-            logger.error(f"Error getting unique faces: {e}")
-            return []

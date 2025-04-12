@@ -1,11 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, delete
+from sqlalchemy import select, insert, delete, update
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
 import logging
-from .models import Image, FaceDetection, ObjectDetection, TextDetection, SceneClassification, ExifMetadata
+from .models import Image, FaceDetection, ObjectDetection, TextDetection, SceneClassification, ExifMetadata, FaceIdentity
 from geoalchemy2.functions import ST_GeogFromText
 from datetime import datetime
+import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -317,28 +318,43 @@ class DatabaseService:
             logger.exception(f"Error getting image analysis: {str(e)}")
             return None
 
-    async def save_face_detections(self, 
-                                 image_id: int, 
-                                 faces_data: List[Dict[str, Any]]) -> List[FaceDetection]:
-        """Save face detection results."""
-        async with self.session_factory() as session:
-            async with session.begin():
-                faces = []
-                
-                for face_data in faces_data:
-                    face = FaceDetection(
-                        image_id=image_id,
-                        **face_data
-                    )
-                    session.add(face)
-                    faces.append(face)
-                
-                await session.commit()
-                return faces
+    async def save_face_detections(self, image_id: int, faces_data: List[Dict[str, Any]]) -> List[FaceDetection]:
+        """Save face detection results to the database."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    detections = []
+                    for face_data in faces_data:
+                        # Ensure we have a bounding box
+                        if "bbox" in face_data and "bounding_box" not in face_data:
+                            face_data["bounding_box"] = face_data.pop("bbox")
+                        
+                        if "bounding_box" not in face_data:
+                            logger.error(f"Face detection missing bounding box: {face_data}")
+                            continue
+                        
+                        # Create detection
+                        face = FaceDetection(
+                            image_id=image_id,
+                            bounding_box=face_data["bounding_box"],
+                            landmarks=face_data.get("landmarks"),
+                            embedding=face_data.get("embedding"),
+                            identity_id=face_data.get("identity_id"),
+                            face_id=face_data.get("face_id"),
+                            score=face_data.get("score", 0.0),  # Add detection score
+                            similarity_score=face_data.get("similarity_score", 0.0),  # Keep similarity score
+                            attributes=face_data.get("attributes", {})
+                        )
+                        session.add(face)
+                        detections.append(face)
+                    
+                    await session.commit()
+                    return detections
+        except Exception as e:
+            logger.error(f"Error saving face detections: {e}")
+            return []
 
-    async def save_object_detections(self, 
-                                   image_id: int, 
-                                   objects_data: List[Dict[str, Any]]) -> List[ObjectDetection]:
+    async def save_object_detections(self, image_id: int, objects_data: List[Dict[str, Any]]) -> List[ObjectDetection]:
         """Save object detection results."""
         async with self.session_factory() as session:
             async with session.begin():
@@ -355,9 +371,7 @@ class DatabaseService:
                 await session.commit()
                 return objects
 
-    async def save_text_detections(self, 
-                                 image_id: int, 
-                                 text_data: List[Dict[str, Any]]) -> List[TextDetection]:
+    async def save_text_detections(self, image_id: int, text_data: List[Dict[str, Any]]) -> List[TextDetection]:
         """Save text detection results."""
         async with self.session_factory() as session:
             async with session.begin():
@@ -374,9 +388,7 @@ class DatabaseService:
                 await session.commit()
                 return texts
 
-    async def save_scene_classification(self, 
-                                      image_id: int, 
-                                      scene_data: Dict[str, Any]) -> SceneClassification:
+    async def save_scene_classification(self, image_id: int, scene_data: Dict[str, Any]) -> SceneClassification:
         """Save scene classification result."""
         async with self.session_factory() as session:
             async with session.begin():
@@ -387,6 +399,125 @@ class DatabaseService:
                 session.add(scene)
                 await session.commit()
                 return scene
+
+    async def clear_face_data(self) -> bool:
+        """Clear all face detections and identities from the database."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Delete all face detections first (due to foreign key constraint)
+                    await session.execute(delete(FaceDetection))
+                    # Then delete all face identities
+                    await session.execute(delete(FaceIdentity))
+                    await session.commit()
+                    return True
+        except Exception as e:
+            logger.error(f"Error clearing face data: {e}")
+            return False
+
+    async def get_all_images(self) -> List[Image]:
+        """Get all images from the database."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    query = select(Image)
+                    result = await session.execute(query)
+                    return result.scalars().all()
+        except Exception as e:
+            logger.error(f"Error getting all images: {e}")
+            return []
+
+    async def get_face_identities(self) -> List[Dict[str, Any]]:
+        """Get all face identities with their associated detections."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Query all face identities
+                    query = select(FaceIdentity).options(
+                        joinedload(FaceIdentity.detections).joinedload(FaceDetection.image)
+                    )
+                    result = await session.execute(query)
+                    identities = result.unique().scalars().all()
+
+                    # Format response
+                    formatted_identities = []
+                    for identity in identities:
+                        detections = []
+                        for detection in identity.detections:
+                            # Get the image filename for this detection
+                            image_stem = pathlib.Path(detection.image.filename).stem
+                            # Format face ID consistently with how they're saved
+                            face_id = f"face_{image_stem}_{detection.id}"
+                            face_path = f"image/faces/{face_id}.jpg"
+                            
+                            detections.append({
+                                'image_id': detection.image_id,
+                                'image_path': face_path,
+                                'face_id': face_id,
+                                'bounding_box': detection.bounding_box
+                            })
+                        
+                        formatted_identities.append({
+                            'id': identity.id,
+                            'label': identity.label,
+                            'reference_embedding': identity.reference_embedding,
+                            'detections': detections
+                        })
+                    
+                    return formatted_identities
+        except Exception as e:
+            logger.error(f"Error getting face identities: {e}")
+            return []
+
+    async def update_face_identity_label(self, identity_id: int, new_label: str) -> bool:
+        """Update the label of a face identity."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Get the identity
+                    query = select(FaceIdentity).where(FaceIdentity.id == identity_id)
+                    result = await session.execute(query)
+                    identity = result.scalar_one_or_none()
+
+                    if not identity:
+                        logger.error(f"Face identity {identity_id} not found")
+                        return False
+
+                    # Update the label
+                    identity.label = new_label
+                    await session.commit()
+                    return True
+        except Exception as e:
+            logger.error(f"Error updating face identity label: {e}")
+            return False
+
+    async def merge_face_identities(self, source_id: int, target_id: int) -> bool:
+        """Merge two face identities, moving all detections from source to target."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Get both identities
+                    source = await session.get(FaceIdentity, source_id)
+                    target = await session.get(FaceIdentity, target_id)
+
+                    if not source or not target:
+                        logger.error(f"One or both face identities not found: {source_id}, {target_id}")
+                        return False
+
+                    # Update all detections from source to point to target
+                    await session.execute(
+                        update(FaceDetection)
+                        .where(FaceDetection.identity_id == source_id)
+                        .values(identity_id=target_id)
+                    )
+
+                    # Delete the source identity
+                    await session.delete(source)
+                    await session.commit()
+                    return True
+        except Exception as e:
+            logger.error(f"Error merging face identities: {e}")
+            return False
 
     async def cleanup(self):
         """Close the database session."""

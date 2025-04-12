@@ -11,6 +11,8 @@ import json
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from sqlalchemy.orm import selectinload
 from database.database_service import DatabaseService
 from database.config import get_async_session, get_db
 from pydantic import BaseModel
@@ -30,6 +32,7 @@ from fastapi import status
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 import shutil
+from models.inference.face_detector import FaceDetector
 from werkzeug.utils import secure_filename
 
 # Configure logging
@@ -214,17 +217,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Constants for paths
+BACKEND_DIR = Path(__file__).resolve().parent
+FACES_DIR = BACKEND_DIR / "image" / "faces"
+FACES_DIR.mkdir(exist_ok=True, parents=True)
+
 # Global configuration
 APP_CONFIG = {
-    "IMAGES_DIR": "./image",
-    "FACES_DIR": "./image/faces",
-    "API_BASE_URL": "http://localhost:8000"
+    "IMAGES_DIR": str(BACKEND_DIR / "image"),
+    "API_BASE_URL": "http://localhost:8000",
+    "FACES_DIR": str(FACES_DIR)
 }
 
 # Ensure directories exist
 IMAGES_DIR = Path(APP_CONFIG["IMAGES_DIR"]).resolve()
-FACES_DIR = Path(APP_CONFIG["FACES_DIR"]).resolve()
-os.makedirs(FACES_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
 @app.get("/config")
@@ -232,15 +238,15 @@ async def get_config():
     """Get application configuration."""
     return JSONResponse(content=APP_CONFIG)
 
-@app.get("/images/faces/{face_identifier}")
+@app.get("/image/faces/{face_identifier}")
 async def get_face_image(face_identifier: str):
     """Serve face images with proper headers."""
-    # Try new format first (face_{id}.jpg)
-    image_path = FACES_DIR / f"face_{face_identifier.split('_')[-1].split('.')[0]}.jpg"
+    # The face_identifier should already be in the correct format (face_{image_stem}_{id}.jpg)
+    # Just need to handle the .jpg extension if not present
+    if not face_identifier.endswith('.jpg'):
+        face_identifier = f"{face_identifier}.jpg"
     
-    # If not found, try the exact requested filename (legacy support)
-    if not image_path.exists():
-        image_path = FACES_DIR / face_identifier
+    image_path = FACES_DIR / face_identifier
     
     if not image_path.exists():
         logger.error(f"Face image not found: {image_path}")
@@ -249,7 +255,13 @@ async def get_face_image(face_identifier: str):
             content={"error": f"Face image {face_identifier} not found"}
         )
     
-    return FileResponse(image_path)
+    mime_type, _ = mimetypes.guess_type(str(image_path))
+    mime_type = mime_type or 'application/octet-stream'
+    return FileResponse(
+        path=image_path,
+        media_type=mime_type,
+        headers={"Cache-Control": "public, max-age=3600"}
+    )
 
 @app.get("/images/{image_name}")
 async def get_image(image_name: str):
@@ -459,54 +471,53 @@ async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
 
 @app.get("/unique-faces")
 async def get_unique_faces(db: AsyncSession = Depends(get_db)):
-    """Return unique faces detected across images from the database."""
+    """Get unique faces from the database."""
     try:
-        log_human_readable(f"Retrieving unique faces from database")
-        
-        # Query FaceIdentity and related FaceDetection records from the database
-        query = select(FaceIdentity)
+        # Query to get all face identities with their detections
+        query = select(FaceIdentity).options(
+            selectinload(FaceIdentity.detections).selectinload(FaceDetection.image)
+        )
         result = await db.execute(query)
-        face_identities = result.scalars().all()
+        identities = result.scalars().all()
         
-        unique_faces = []
-        for identity in face_identities:
-            # Get all face detections for this identity
-            detections_query = select(FaceDetection).where(FaceDetection.identity_id == identity.id)
-            detections_result = await db.execute(detections_query)
-            detections = detections_result.scalars().all()
+        # Convert identities to list of dicts with detection count
+        identity_list = []
+        for identity in identities:
+            detections = []
+            image_ids = set()  # Track unique images
             
-            # Get unique images containing this face
-            image_ids = set(detection.image_id for detection in detections)
-            images_query = select(DBImage).where(DBImage.id.in_(image_ids))
-            images_result = await db.execute(images_query)
-            images = images_result.scalars().all()
+            for detection in identity.detections:
+                if detection.image:
+                    image_ids.add(detection.image.id)
+                    detections.append({
+                        "id": detection.id,
+                        "image_id": detection.image.id,
+                        "image_path": f"image/faces/face_{detection.image.id}_{detection.id}.jpg"  
+                    })
             
-            # Create a mapping of image_id to filename for quick lookup
-            image_map = {img.id: img.filename for img in images}
-            
-            # Create face image paths based on image name and detection ID
-            face_images = []
-            for detection in detections:
-                if detection.image_id in image_map:
-                    image_filename = image_map[detection.image_id]
-                    image_stem = Path(image_filename).stem
-                    face_id = f"face_{image_stem}_{detection.id}"
-                    face_path = f"images/faces/{face_id}.jpg"
-                    face_images.append(face_path)
-            
-            # Format the response
-            unique_faces.append({
-                'id': identity.id,
-                'label': identity.label,
-                'images': [image_map[img_id] for img_id in image_ids if img_id in image_map],
-                'face_images': face_images
+            identity_list.append({
+                "id": identity.id,
+                "label": identity.label,
+                "images": [f"images/{img.filename}" for img in [d.image for d in identity.detections if d.image]],  
+                "detections": detections,
+                "detection_count": len(detections)  # Add count for sorting
             })
         
-        log_human_readable(f"Found {len(unique_faces)} unique faces in the database")
-        return JSONResponse(content={"unique_faces": unique_faces}, media_type="application/json")
+        # Sort by detection count in decreasing order
+        identity_list.sort(key=lambda x: x["detection_count"], reverse=True)
+        
+        # Remove the count from final output
+        for identity in identity_list:
+            del identity["detection_count"]
+        
+        return JSONResponse(content=identity_list)
+        
     except Exception as e:
-        logger.error(f"Failed to get unique faces from database: {e}")
-        return JSONResponse(status_code=500, content={"error": f"Failed to get unique faces: {str(e)}"})
+        logger.error(f"Error getting unique faces: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
 
 class UploadResponse(BaseModel):
     filename: str
@@ -723,139 +734,6 @@ async def scan_text(
         logger.error(f"Error scanning text: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred during text scanning")
 
-# @app.post("/reprocess-face-identities")
-# async def reprocess_face_identities(
-#     similarity_threshold: float = 0.5,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Reprocess all face detections in the database and update face identities.
-    
-#     This endpoint will:
-#     1. Scan all face detections in the database
-#     2. Re-cluster them into unique identities based on embedding similarity
-#     3. Update the face_identities table
-    
-#     Args:
-#         similarity_threshold: Threshold for considering two faces as the same person (0.0-1.0)
-        
-#     Returns:
-#         Statistics about the operation
-#     """
-#     try:
-#         log_human_readable(f"Starting face identity reprocessing with threshold {similarity_threshold}")
-        
-#         # Step 1: Get all face detections from the database
-#         detections_query = select(FaceDetection)
-#         detections_result = await db.execute(detections_query)
-#         face_detections = detections_result.scalars().all()
-        
-#         if not face_detections:
-#             return JSONResponse(
-#                 content={"message": "No face detections found in database", "stats": {"processed": 0}}
-#             )
-        
-#         log_human_readable(f"Found {len(face_detections)} face detections to process")
-        
-#         # Step 2: Clear existing identities to ensure a fresh start
-#         # First, clear identity references from face detections
-#         await db.execute(
-#             FaceDetection.__table__.update().values(identity_id=None)
-#         )
-#         # Then delete all face identities
-#         await db.execute(delete(FaceIdentity))
-#         await db.commit()
-#         log_human_readable("Cleared existing face identities")
-        
-#         # Step 3: Group face detections by embedding similarity
-#         identities = []  # List of (identity_id, reference_embedding) tuples
-#         identity_map = {}  # Maps detection.id to identity_id
-#         stats = {
-#             "total_detections": len(face_detections),
-#             "new_identities": 0,
-#             "assigned_detections": 0,
-#             "unassigned_detections": 0
-#         }
-        
-#         # Initialize face detector for similarity calculations
-#         from models.inference.face_detector import FaceDetector
-#         face_detector = FaceDetector()
-        
-#         # Process each detection
-#         for detection in face_detections:
-#             embedding = np.array(detection.embedding, dtype=np.float32)
-#             embedding /= (np.linalg.norm(embedding) + 1e-6)
-            
-#             # Find best matching identity
-#             best_match = None
-#             best_similarity = 0
-            
-#             for identity_id, reference_embedding in identities:
-#                 reference_embedding = np.array(reference_embedding, dtype=np.float32)
-#                 similarity = face_detector._compute_similarity(embedding, reference_embedding)
-                
-#                 log_human_readable(f"Comparing face {detection.id} with identity {identity_id}: similarity={similarity:.3f}")
-                
-#                 if similarity > similarity_threshold and similarity > best_similarity:
-#                     best_similarity = similarity
-#                     best_match = identity_id
-            
-#             if best_match is not None:
-#                 # Assign to existing identity
-#                 identity_map[detection.id] = best_match
-#                 stats["assigned_detections"] += 1
-#                 log_human_readable(f"Assigned face {detection.id} to existing identity {best_match} with similarity {best_similarity:.3f}")
-#             else:
-#                 # Create new identity
-#                 new_identity_id = len(identities)
-#                 identities.append((new_identity_id, embedding.tolist()))
-#                 identity_map[detection.id] = new_identity_id
-#                 stats["new_identities"] += 1
-#                 stats["assigned_detections"] += 1
-#                 log_human_readable(f"Created new identity {new_identity_id} for face {detection.id}")
-        
-#         # Step 4: Create face identities in the database
-#         db_identities = {}  # Maps our identity_id to database identity
-        
-#         for identity_id, reference_embedding in identities:
-#             # Create a new identity in the database
-#             new_identity = FaceIdentity(
-#                 label=f"Person_{identity_id}",
-#                 reference_embedding=reference_embedding
-#             )
-#             db.add(new_identity)
-#             await db.flush()
-#             db_identities[identity_id] = new_identity
-        
-#         # Step 5: Update face detections with identity references
-#         for detection in face_detections:
-#             if detection.id in identity_map:
-#                 local_identity_id = identity_map[detection.id]
-#                 db_identity = db_identities[local_identity_id]
-#                 detection.identity_id = db_identity.id
-#             else:
-#                 stats["unassigned_detections"] += 1
-        
-#         # Commit all changes
-#         await db.commit()
-        
-#         log_human_readable(f"Face identity reprocessing complete. Created {stats['new_identities']} identities.")
-        
-#         return JSONResponse(
-#             content={
-#                 "success": True,
-#                 "message": "Face identities reprocessed successfully",
-#                 "stats": stats
-#             }
-#         )
-#     except Exception as e:
-#         await db.rollback()
-#         logger.error(f"Failed to reprocess face identities: {e}")
-#         return JSONResponse(
-#             status_code=500,
-#             content={"error": f"Failed to reprocess face identities: {str(e)}"}
-#         )
-
 @app.post("/reprocess-face-identities")
 async def reprocess_face_identities(
     similarity_threshold: float = 0.5,
@@ -894,7 +772,6 @@ async def reprocess_face_identities(
             "unassigned_detections": 0
         }
 
-        from models.inference.face_detector import FaceDetector
         face_detector = FaceDetector()
         identity_counter = 0
 
@@ -970,6 +847,107 @@ async def reprocess_face_identities(
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to reprocess face identities: {str(e)}"}
+        )
+
+@app.post("/reprocess-faces")
+async def reprocess_faces(db: AsyncSession = Depends(get_db)):
+    """Reprocess all face detections and identities in the database."""
+    try:
+        log_human_readable("Starting face detection reprocessing...")
+        
+        # Get all images from database
+        query = select(DBImage)
+        result = await db.execute(query)
+        images = result.scalars().all()
+        
+        if not images:
+            return JSONResponse(
+                content={"message": "No images found in database"},
+                status_code=404
+            )
+        
+        # Clear existing face detections and identities
+        await db.execute(FaceDetection.__table__.delete())
+        await db.execute(FaceIdentity.__table__.delete())
+        await db.commit()
+        
+        # Clear existing face crops
+        if FACES_DIR.exists():
+            for face_file in FACES_DIR.glob("face_*.jpg"):
+                face_file.unlink()
+        
+        total = len(images)
+        processed = 0
+        total_faces = 0
+        successful_face_crops = set()
+        unique_identities = set()
+        
+        for image in images:
+            try:
+                # Load image
+                image_path = IMAGES_DIR / image.filename
+                if not image_path.exists():
+                    logger.error(f"Image not found: {image_path}")
+                    continue
+                
+                # Read image
+                img = cv2.imread(str(image_path))
+                if img is None:
+                    logger.error(f"Failed to read image: {image_path}")
+                    continue
+                
+                # Convert BGR to RGB
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                
+                # Detect faces using the face detector directly
+                result = await analyzer.face_detector.detect_faces(img, image.id, db)
+                
+                if result.get("faces_detected", False):
+                    faces = result.get("faces", [])
+                    total_faces += len(faces)
+                    
+                    # Track successful face crops and unique identities
+                    for face in faces:
+                        if face.get("face_image"):
+                            successful_face_crops.add(face["face_image"])
+                        if face.get("identity_id"):
+                            unique_identities.add(face["identity_id"])
+                
+                processed += 1
+                if processed % 5 == 0:
+                    log_human_readable(f"Processed {processed}/{total} images, found {total_faces} faces so far...")
+                
+            except Exception as e:
+                logger.error(f"Error processing image {image.filename}: {e}")
+                continue
+        
+        await db.commit()
+        
+        summary = (
+            f"Face detection reprocessing complete.\n"
+            f"Processed {processed}/{total} images\n"
+            f"Total faces detected: {total_faces}\n"
+            f"Unique identities found: {len(unique_identities)}\n"
+            f"Face crops saved: {len(successful_face_crops)}"
+        )
+        log_human_readable(summary)
+        
+        return JSONResponse(
+            content={
+                "message": "Face detection reprocessing complete",
+                "processed_images": processed,
+                "total_images": total,
+                "total_faces_detected": total_faces,
+                "unique_identities": len(unique_identities),
+                "face_crops_saved": len(successful_face_crops)
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to reprocess faces: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
         )
 
 @app.post("/recut-face-images")

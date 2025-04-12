@@ -4,25 +4,43 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-interface UniqueFace {
+interface Detection {
   id: number;
-  label: string;
-  images: string[];  // Array of original image paths
-  face_images: number[];  // Array of face IDs (changed from string[])
+  image_id: number;
+  image_path: string;
+}
+
+interface FaceIdentity {
+  id: number;
+  label: string | null;
+  images: string[];
+  detections: Detection[];
+}
+
+interface Person {
+  id: number;
+  label: string | null;
+  face_images: string[];
+  original_images: string[];
 }
 
 interface Config {
   API_BASE_URL: string;
 }
 
-export default function PeopleGrid() {
-  const [uniqueFaces, setUniqueFaces] = useState<UniqueFace[]>([]);
+interface APIResponse {
+  data: FaceIdentity[];
+}
+
+const PeopleGrid: React.FC = () => {
+  const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPerson, setSelectedPerson] = useState<UniqueFace | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newName, setNewName] = useState('');
   const [config, setConfig] = useState<Config>({ API_BASE_URL: 'http://localhost:8000' });
   const [editingPerson, setEditingPerson] = useState<number | null>(null);
-  const [newName, setNewName] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch config from backend
@@ -40,18 +58,25 @@ export default function PeopleGrid() {
   useEffect(() => {
     const fetchUniqueFaces = async () => {
       try {
-        console.log('Fetching unique faces from:', `${config.API_BASE_URL}/unique-faces`);
+        setError(null);
         const response = await fetch(`${config.API_BASE_URL}/unique-faces`);
         if (!response.ok) {
-          throw new Error(`Failed to fetch unique faces: ${response.status} ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch faces');
         }
         const data = await response.json();
-        console.log('Received unique faces data:', data);
-        setUniqueFaces(data.unique_faces || []);
-        console.log('Updated unique faces state:', data.unique_faces?.length || 0, 'faces');
-      } catch (error) {
-        console.error('Error fetching unique faces:', error);
-        setError('Failed to load people data. Please try again later.');
+        
+        // Transform the data
+        const transformedPeople: Person[] = Array.isArray(data) ? data.map((identity: FaceIdentity) => ({
+          id: identity.id,
+          label: identity.label,
+          face_images: identity.detections.map((d: Detection) => d.image_path),
+          original_images: identity.images
+        })) : [];
+        
+        setPeople(transformedPeople);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -60,14 +85,8 @@ export default function PeopleGrid() {
     fetchUniqueFaces();
   }, [config.API_BASE_URL]);
 
-  const getFaceImageUrl = (faceIdentifier: string | number) => {
-    const id = faceIdentifier.toString();
-    // If it's already a full path (legacy case), use as-is
-    if (id.includes('/')) {
-      return `${config.API_BASE_URL}/${id.replace(/^\//, '')}`;
-    }
-    // Otherwise assume it's a face ID and use new format
-    return `${config.API_BASE_URL}/images/faces/${id}`;
+  const getFaceImageUrl = (image_path: string) => {
+    return `${config.API_BASE_URL}/${image_path}`;
   };
 
   // Function to update person name
@@ -90,9 +109,9 @@ export default function PeopleGrid() {
       const data = await response.json();
       
       // Update local state
-      setUniqueFaces(prevFaces => 
-        prevFaces.map(face => 
-          face.id === personId ? { ...face, label: name } : face
+      setPeople(prevPeople => 
+        prevPeople.map(person => 
+          person.id === personId ? { ...person, label: name } : person
         )
       );
       
@@ -143,7 +162,7 @@ export default function PeopleGrid() {
     );
   }
 
-  if (!uniqueFaces || uniqueFaces.length === 0) {
+  if (!people || people.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] py-12 text-center space-y-4">
         <p className="text-lg text-white/70">No faces detected yet</p>
@@ -155,8 +174,8 @@ export default function PeopleGrid() {
   return (
     <div className="min-h-screen bg-[#050505] p-4 sm:p-6">
       {/* Grid of unique faces */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-8xl mx-auto">
-        {uniqueFaces.map((person) => (
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 p-2 w-full">
+        {people.map((person) => (
           <div
             key={person.id}
             className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
@@ -170,7 +189,7 @@ export default function PeopleGrid() {
             <div className="aspect-square w-full">
               <div className="relative w-full h-full">
                 <Image
-                  src={getFaceImageUrl(person.face_images[0].toString())}
+                  src={getFaceImageUrl(person.face_images[0])}
                   alt={person.label || `Person ${person.id}`}
                   fill
                   className="object-cover"
@@ -232,7 +251,7 @@ export default function PeopleGrid() {
                     </button>
                   </div>
                 )}
-                <p className="text-white/60 text-sm mt-1">{person.images.length} photos</p>
+                <p className="text-white/60 text-sm mt-1">{person.face_images.length} photos</p>
               </div>
             </div>
           </div>
@@ -252,7 +271,7 @@ export default function PeopleGrid() {
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden">
                     <Image
-                      src={getFaceImageUrl(selectedPerson.face_images[0].toString())}
+                      src={getFaceImageUrl(selectedPerson.face_images[0])}
                       alt={selectedPerson.label || `Person ${selectedPerson.id}`}
                       fill
                       className="object-cover"
@@ -305,7 +324,7 @@ export default function PeopleGrid() {
                         </button>
                       </div>
                     )}
-                    <p className="text-sm text-white/60">Found in {selectedPerson.images.length} photos</p>
+                    <p className="text-sm text-white/60">Found in {selectedPerson.face_images.length} photos</p>
                   </div>
                 </div>
                 <button 
@@ -328,7 +347,7 @@ export default function PeopleGrid() {
                         className="aspect-square relative rounded-lg overflow-hidden bg-[#0a0a0a] border border-white/[0.05]"
                       >
                         <Image
-                          src={getFaceImageUrl(faceImage.toString())}
+                          src={getFaceImageUrl(faceImage)}
                           alt={`Face ${index + 1}`}
                           fill
                           className="object-cover"
@@ -343,21 +362,21 @@ export default function PeopleGrid() {
                 <div className="p-6">
                   <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4">Original Photos</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {selectedPerson.images.map((image, index) => (
+                    {selectedPerson.original_images.map((imagePath, idx) => (
                       <div 
-                        key={index}
+                        key={idx}
                         className="aspect-video relative rounded-lg overflow-hidden bg-[#0a0a0a] border border-white/[0.05]"
                       >
                         <Image
-                          src={`${config.API_BASE_URL}/image/${image}`}
-                          alt={`Photo ${index + 1}`}
+                          src={`${config.API_BASE_URL}/${imagePath}`}
+                          alt={`Original photo ${idx + 1}`}
                           fill
                           className="object-cover"
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33.33vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
                           <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <p className="text-sm text-white/90 truncate">{image}</p>
+                            <p className="text-sm text-white/90 truncate">{imagePath}</p>
                           </div>
                         </div>
                       </div>
@@ -371,4 +390,6 @@ export default function PeopleGrid() {
       )}
     </div>
   );
-}
+};
+
+export default PeopleGrid;

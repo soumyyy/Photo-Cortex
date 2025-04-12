@@ -322,7 +322,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-8 sm:px-6 sm:py-12">
       <Toaster />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-8xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 p-2 w-full">
         {images.map((image) => (
           <div 
             key={image.filename}
