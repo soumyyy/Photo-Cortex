@@ -62,10 +62,8 @@ class ImageAnalyzer:
             # Extract metadata (synchronous operation)
             metadata = self._extract_metadata(image_path)
 
-            # Run all analyses synchronously since they don't have async implementations
+            # Run analyses that don't require image_id first
             text_analysis = self.text_recognizer.detect_text(image)
-            # Pass the session to the face detector for identity matching
-            face_analysis = self.face_detector.detect_faces(image, str(image_path.name), session)
             object_analysis = self.object_detector.detect_objects(image)
             scene_analysis = self.scene_classifier.classify_scene_combined(image)
             clip_embedding = self.clip_encoder.encode_image(image)
@@ -88,18 +86,21 @@ class ImageAnalyzer:
                 image_fields["latitude"] = lat
                 image_fields["longitude"] = lon
 
-            # Create the Image model with only the valid fields
-            db_image = Image(**image_fields)
-            session.add(db_image)
-            await session.flush()  # Get the image ID
+            # Create and save the image record first to get the image_id
+            image_record = Image(**image_fields)
+            session.add(image_record)
+            await session.flush()  # This will populate the image_id
+            
+            # Now we can pass the correct image_id to face_detector
+            face_analysis = await self.face_detector.detect_faces(image, image_record.id, session)
 
-            # Create EXIF metadata record as a SEPARATE model
+            # Save EXIF metadata record as a SEPARATE model
             # These fields should NEVER be passed to the Image model
             exif_data = metadata.get("exif", {})
             if exif_data.get("camera_make") or exif_data.get("camera_model") or exif_data.get("focal_length") or \
                exif_data.get("exposure_time") or exif_data.get("f_number") or exif_data.get("iso"):
                 
-                exif = ExifMetadata(image_id=db_image.id)
+                exif = ExifMetadata(image_id=image_record.id)
                 
                 # Only set fields that have values
                 if exif_data.get("camera_make"):
@@ -121,7 +122,7 @@ class ImageAnalyzer:
             if text_analysis["text_detected"]:
                 for block in text_analysis["text_blocks"]:
                     text_detection = TextDetection(
-                        image_id=db_image.id,
+                        image_id=image_record.id,
                         text=block["text"],
                         confidence=block["confidence"],
                         bounding_box=block["bbox"]
@@ -137,7 +138,7 @@ class ImageAnalyzer:
                     # Create face detection record with proper validation
                     try:
                         face_detection = FaceDetection(
-                            image_id=db_image.id,
+                            image_id=image_record.id,
                             confidence=float(face.get('score', 0.0)),  # Store detection confidence
                             embedding=embedding.tolist(),
                             bounding_box=face.get('bbox'),
@@ -152,7 +153,7 @@ class ImageAnalyzer:
             # Save object detections
             for obj in object_analysis["objects"]:
                 object_detection = ObjectDetection(
-                    image_id=db_image.id,
+                    image_id=image_record.id,
                     label=obj["label"],
                     confidence=obj["confidence"],
                     bounding_box=obj["bbox"]
@@ -162,7 +163,7 @@ class ImageAnalyzer:
             # Save scene classification
             if scene_analysis["scene_type"]:
                 scene_classification = SceneClassification(
-                    image_id=db_image.id,
+                    image_id=image_record.id,
                     scene_type=scene_analysis["scene_type"],
                     confidence=scene_analysis["confidence"]
                 )
@@ -171,7 +172,7 @@ class ImageAnalyzer:
             await session.commit()
             
             # Return the ID of the saved image record
-            return db_image.id
+            return image_record.id
 
         except Exception as e:
             logger.error(f"Error analyzing image {image_path}: {str(e)}")

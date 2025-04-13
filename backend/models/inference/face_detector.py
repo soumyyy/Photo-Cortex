@@ -196,38 +196,29 @@ class FaceDetector:
         """Detect faces in an image and extract embeddings."""
         try:
             if self.app is None:
-                return {"error": "Face detector not initialized"}
+                raise ValueError("Face detector not properly initialized")
+                
+            # Convert image to RGB if needed
+            if len(image.shape) == 2:  # Grayscale
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+            elif image.shape[2] == 4:  # RGBA
+                image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+            elif image.shape[2] == 3 and image.dtype == np.uint8:
+                pass  # Already RGB
+            else:
+                raise ValueError(f"Unsupported image format: {image.shape}, {image.dtype}")
 
-            # Detect faces using InsightFace
+            # Detect faces
             faces = self.app.get(image)
-            
-            if not faces:
-                return {
-                    "faces_detected": False,
-                    "face_count": 0,
-                    "faces": []
-                }
-
             results = []
-            seen_embeddings = set()  # Track similar embeddings to avoid duplicates
             
-            for face_idx, face in enumerate(faces):
-                # Skip if confidence is too low
-                if face.det_score < 0.5:
-                    continue
-                
-                # Get embedding as numpy array
-                embedding = face.embedding
-                embedding_bytes = embedding.tobytes()
-                
-                # Skip if too similar to previously seen face
-                if embedding_bytes in seen_embeddings:
-                    continue
-                seen_embeddings.add(embedding_bytes)
-                
+            for face in faces:
                 # Calculate smile intensity and eye status
                 smile_intensity = self.calculate_smile_intensity(face.kps)
                 eye_status = self.calculate_eye_status(face.kps)
+                
+                # Get embedding for face recognition
+                embedding = face.embedding
                 
                 # Update face database
                 identity_id, detection_id = await self._update_face_db(
