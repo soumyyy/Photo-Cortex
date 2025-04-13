@@ -6,7 +6,7 @@ from .text_recognizer import TextRecognizer
 from .face_detector import FaceDetector
 from .object_detector import ObjectDetector
 from .scene_classifier import SceneClassifier
-from .clip_encoder import ClipEncoder
+# from .clip_encoder import ClipEncoder
 from typing import Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession, async_session
 from sqlalchemy.orm import declarative_base, scoped_session
@@ -15,7 +15,8 @@ from database.models import Image, TextDetection, SceneClassification, ObjectDet
 from database.config import get_db
 import datetime
 from geoalchemy2.shape import WKTElement
-from sqlalchemy import select, delete   
+from sqlalchemy import select, delete
+from sqlalchemy.future import select
 
 logger = logging.getLogger(__name__)
 
@@ -26,168 +27,241 @@ class ImageAnalyzer:
         self.face_detector = FaceDetector()
         self.object_detector = ObjectDetector()
         self.scene_classifier = SceneClassifier()
-        self.clip_encoder = ClipEncoder()
+        # self.clip_encoder = ClipEncoder()
         logger.info("ImageAnalyzer initialized successfully")
 
     async def analyze_image_with_session(self, image_path: Path, session: AsyncSession) -> int:
         """
         Analyze an image using various models and save results using provided session.
-        This version is used with FastAPI dependency injection.
+        Handles existing images by retrieving their ID instead of inserting duplicates.
         """
+        image_id = None # Initialize image_id
+        image_record = None
+        image = None # Initialize image variable
+
         try:
             # Ensure image path is absolute
             image_path = Path(image_path).resolve()
             if not image_path.exists():
-                raise ValueError(f"Image file not found: {image_path}")
-                
-            # Check if image with this filename already exists
-            query = select(Image).where(Image.filename == image_path.name)
-            result = await session.execute(query)
-            existing_image = result.scalar_one_or_none()
+                error_msg = f"Image file not found: {image_path}"
+                logger.error(error_msg)
+                raise FileNotFoundError(error_msg)
 
-            if existing_image:
-                # Image already exists, skip analysis
-                logger.info(f"Image with filename {image_path.name} already exists. Skipping analysis.")
-                return existing_image.id
-                
-            # Read the image
-            image = cv2.imread(str(image_path))
+            # --- Check if image already exists in DB ---
+            stmt = select(Image).where(Image.filename == image_path.name)
+            result = await session.execute(stmt)
+            image_record = result.scalar_one_or_none()
+
+            if image_record:
+                logger.info(f"Image {image_path.name} already exists in DB with ID: {image_record.id}. Re-analyzing.")
+                image_id = image_record.id
+                # Load image bytes since we didn't create the record and need it for analysis
+                image = cv2.imread(str(image_path))
+                if image is None:
+                     logger.error(f"Failed to read existing image file: {image_path}")
+                     raise ValueError(f"Failed to read existing image file: {image_path}")
+
+            else:
+                logger.info(f"Image {image_path.name} not found in DB. Creating new record.")
+                # --- Create new image record ---
+                # Load image bytes first to get metadata and ensure readability
+                image = cv2.imread(str(image_path))
+                if image is None:
+                     logger.error(f"Failed to read new image file: {image_path}")
+                     raise ValueError(f"Failed to read new image file: {image_path}")
+
+                height, width = image.shape[:2]
+                file_size = image_path.stat().st_size
+                exif_data = self._extract_metadata(image_path)
+                created_at = datetime.datetime.now()
+                date_taken = exif_data.get("date_taken")
+                gps_info = exif_data.get("gps")
+                latitude = gps_info[0] if gps_info else None
+                longitude = gps_info[1] if gps_info else None
+                location = f"POINT({longitude} {latitude})" if latitude and longitude else None
+
+                image_record = Image(
+                    filename=image_path.name,
+                    created_at=created_at,
+                    dimensions=f"{width}x{height}",
+                    format=image_path.suffix.lower().strip('.'),
+                    file_size=file_size,
+                    date_taken=date_taken,
+                    latitude=latitude,
+                    longitude=longitude,
+                    location=WKTElement(location, srid=4326) if location else None,
+                    embedding=None
+                )
+                session.add(image_record)
+                try:
+                    await session.flush()  # Try to save and get the ID
+                    image_id = image_record.id
+                    logger.info(f"Successfully added new image record for {image_path.name} with ID: {image_id}")
+                except Exception as e: # Catch potential flush errors (like concurrent inserts)
+                     await session.rollback() # Rollback the add/flush attempt
+                     logger.warning(f"Error flushing new image record for {image_path.name}: {e}. Re-querying...")
+                     # Re-query in case another process inserted it concurrently
+                     stmt_requery = select(Image).where(Image.filename == image_path.name)
+                     result_requery = await session.execute(stmt_requery)
+                     image_record = result_requery.scalar_one_or_none()
+                     if not image_record:
+                         logger.critical(f"Failed to get or create image record for {image_path.name} after flush error and rollback.")
+                         raise ValueError(f"Database error obtaining image record for {image_path.name}") from e
+                     image_id = image_record.id
+                     logger.info(f"Found existing image record for {image_path.name} with ID: {image_id} after flush error.")
+
+            # --- Safety Checks ---
             if image is None:
-                raise ValueError(f"Could not read image at {image_path}")
-                
-            # Validate image dimensions
-            if image.shape[0] == 0 or image.shape[1] == 0:
-                raise ValueError("Invalid image dimensions")
+                 logger.error(f"Image data is None for {image_path.name} before analysis stage.")
+                 raise ValueError(f"Image data unavailable for {image_path.name}")
+            if image_id is None:
+                 logger.error(f"Failed to obtain a valid image_id for {image_path.name} before analysis stage.")
+                 raise ValueError(f"Could not determine image_id for {image_path.name}")
 
-            # Extract metadata (synchronous operation)
-            metadata = self._extract_metadata(image_path)
 
-            # Run analyses that don't require image_id first
-            text_analysis = self.text_recognizer.detect_text(image)
-            object_analysis = self.object_detector.detect_objects(image)
-            scene_analysis = self.scene_classifier.classify_scene_combined(image)
-            clip_embedding = self.clip_encoder.encode_image(image)
+            # --- Run Analysis Models --- (Ensure image and image_id are valid before this)
+            try:
+                logger.info(f"Calling detect_text for image_id: {image_id}")
+                text_analysis = self.text_recognizer.detect_text(image)
+                logger.info(f"Finished detect_text for image_id: {image_id}")
+            except Exception as e:
+                logger.error(f"Text recognition failed for {image_path.name}: {e}")
+                text_analysis = {"text_detected": False, "text_blocks": []}
 
-            # CRITICAL: Create a clean dictionary with ONLY valid Image model fields
-            # This ensures no EXIF fields are passed to the Image constructor
-            image_fields = {
-                "filename": image_path.name,
-                "dimensions": f"{image.shape[1]}x{image.shape[0]}",
-                "format": image_path.suffix[1:].lower(),  # Remove leading dot
-                "file_size": int(image_path.stat().st_size),  # in bytes
-                "date_taken": metadata.get("date_taken"),
-                "embedding": clip_embedding
-            }
+            try:
+                logger.info(f"Calling detect_objects for image_id: {image_id}")
+                object_analysis = self.object_detector.detect_objects(image)
+                logger.info(f"Finished detect_objects for image_id: {image_id}")
+            except Exception as e:
+                logger.error(f"Object detection failed for {image_path.name}: {e}")
+                object_analysis = {"objects": []}
 
-            # Add GPS location if available
-            if metadata.get("gps"):
-                lat, lon = metadata["gps"]
-                image_fields["location"] = WKTElement(f'POINT({lon} {lat})', srid=4326)
-                image_fields["latitude"] = lat
-                image_fields["longitude"] = lon
+            try:
+                logger.info(f"Calling classify_scene_combined for image_id: {image_id}")
+                scene_analysis = self.scene_classifier.classify_scene_combined(image)
+                logger.info(f"Finished classify_scene_combined for image_id: {image_id}")
+            except Exception as e:
+                logger.error(f"Scene classification failed for {image_path.name}: {e}")
+                scene_analysis = {"scene_type": None, "confidence": 0.0}
 
-            # Create and save the image record first to get the image_id
-            image_record = Image(**image_fields)
-            session.add(image_record)
-            await session.flush()  # This will populate the image_id
-            
-            # Now we can pass the correct image_id to face_detector
-            face_analysis = await self.face_detector.detect_faces(image, image_record.id, session)
+            clip_embedding = None
+            try:
+                # logger.info(f"Calling encode_image for image_id: {image_id}")
+                # clip_embedding = self.clip_encoder.encode_image(image)
+                # logger.info(f"Finished encode_image for image_id: {image_id}, embedding type: {{type(clip_embedding)}})") # Comment out if needed
+                pass
+            except Exception as e:
+                logger.error(f"CLIP encoding failed for {image_path.name}: {e}")
+                clip_embedding = None # Keep this for robustness
 
-            # Save EXIF metadata record as a SEPARATE model
-            # These fields should NEVER be passed to the Image model
-            exif_data = metadata.get("exif", {})
-            if exif_data.get("camera_make") or exif_data.get("camera_model") or exif_data.get("focal_length") or \
-               exif_data.get("exposure_time") or exif_data.get("f_number") or exif_data.get("iso"):
-                
-                exif = ExifMetadata(image_id=image_record.id)
-                
-                # Only set fields that have values
-                if exif_data.get("camera_make"):
-                    exif.camera_make = exif_data.get("camera_make")
-                if exif_data.get("camera_model"):
-                    exif.camera_model = exif_data.get("camera_model")
-                if exif_data.get("focal_length"):
-                    exif.focal_length = exif_data.get("focal_length")
-                if exif_data.get("exposure_time"):
-                    exif.exposure_time = exif_data.get("exposure_time")
-                if exif_data.get("f_number"):
-                    exif.f_number = exif_data.get("f_number")
-                if exif_data.get("iso"):
-                    exif.iso = exif_data.get("iso")
-                
-                session.add(exif)
+            # Update the image record with the CLIP embedding
+            if clip_embedding is not None:
+                image_record.embedding = clip_embedding
+                logger.info(f"Assigning embedding to image_record for image_id: {image_id}")
+                await session.flush()
 
-            # Save text detections
-            if text_analysis["text_detected"]:
-                for block in text_analysis["text_blocks"]:
-                    text_detection = TextDetection(
-                        image_id=image_record.id,
-                        text=block["text"],
-                        confidence=block["confidence"],
-                        bounding_box=block["bbox"]
-                    )
-                    session.add(text_detection)
+            # Now we can safely run face detection with the image_id and session
+            if image_id is not None:
+                logger.info(f"Calling detect_faces for image_id: {image_id}")
+                face_analysis = await self.face_detector.detect_faces(
+                    image,      # Positional arg 1
+                    image_id,   # Positional arg 2
+                    session     # Positional arg 3 (maps to db_session)
+                )
+                logger.info(f"Finished detect_faces for image_id: {image_id}")
+            else:
+                logger.warning(f"Skipping face detection for {image_path} due to missing image_id.")
+                face_analysis = {"faces_detected": False, "faces": []}
 
             # Save face detections
-            for idx, face in enumerate(face_analysis["faces"]):
-                # Ensure we have the corresponding embedding
-                if idx < len(face_analysis["embeddings"]):
-                    embedding = np.array(face_analysis["embeddings"][idx], dtype=np.float32)
+            if face_analysis.get("faces_detected", False):
+                for face in face_analysis.get("faces", []):
+                    if not face:
+                        continue
                     
-                    # Create face detection record with proper validation
                     try:
                         face_detection = FaceDetection(
-                            image_id=image_record.id,
-                            confidence=float(face.get('score', 0.0)),  # Store detection confidence
-                            embedding=embedding.tolist(),
-                            bounding_box=face.get('bbox'),
-                            landmarks=face.get('landmarks'),
-                            similarity_score=0.0  # Will be updated during identity assignment
+                            image_id=image_id,  # Use the stored image_id
+                            confidence=face["confidence"],
+                            embedding=np.array(face["embedding"], dtype=np.float32),
+                            bounding_box=face["bounding_box"],
+                            landmarks=face.get("landmarks"),
+                            similarity_score=0.0
                         )
                         session.add(face_detection)
                     except Exception as e:
-                        logger.error(f"Error saving face detection: {e}")
-                        continue
+                        logger.error(f"Failed to save face detection for {image_path.name}: {e}")
+
+            # Save EXIF metadata if available
+            exif_data = self._extract_metadata(image_path).get("exif", {})
+            if any(exif_data.get(field) for field in ["camera_make", "camera_model", "focal_length", 
+                                                     "exposure_time", "f_number", "iso"]):
+                try:
+                    exif = ExifMetadata(
+                        image_id=image_id,  # Use the stored image_id
+                        camera_make=exif_data.get("camera_make"),
+                        camera_model=exif_data.get("camera_model"),
+                        focal_length=exif_data.get("focal_length"),
+                        exposure_time=exif_data.get("exposure_time"),
+                        f_number=exif_data.get("f_number"),
+                        iso=exif_data.get("iso")
+                    )
+                    session.add(exif)
+                except Exception as e:
+                    logger.error(f"Failed to save EXIF data for {image_path.name}: {e}")
+
+            # Save text detections
+            if text_analysis.get("text_detected", False):
+                for block in text_analysis.get("text_blocks", []):
+                    try:
+                        text_detection = TextDetection(
+                            image_id=image_id,  # Use the stored image_id
+                            text=block["text"],
+                            confidence=block["confidence"],
+                            bounding_box=block["bbox"]
+                        )
+                        session.add(text_detection)
+                    except Exception as e:
+                        logger.error(f"Failed to save text detection for {image_path.name}: {e}")
 
             # Save object detections
-            for obj in object_analysis["objects"]:
-                object_detection = ObjectDetection(
-                    image_id=image_record.id,
-                    label=obj["label"],
-                    confidence=obj["confidence"],
-                    bounding_box=obj["bbox"]
-                )
-                session.add(object_detection)
+            object_detections = []
+            for obj in object_analysis: 
+                try:
+                    object_detection = ObjectDetection(
+                        image_id=image_id,  # Use the obtained image_id
+                        label=obj.get('class'),
+                        confidence=obj.get('confidence'),
+                        bounding_box=obj.get('bbox')
+                    )
+                    object_detections.append(object_detection)
+                    session.add(object_detection)
+                except Exception as e:
+                    logger.error(f"Failed to save object detection for {image_path.name}: {e}")
 
-            # Save scene classification
-            if scene_analysis["scene_type"]:
-                scene_classification = SceneClassification(
-                    image_id=image_record.id,
-                    scene_type=scene_analysis["scene_type"],
-                    confidence=scene_analysis["confidence"]
-                )
-                session.add(scene_classification)
+            # Save scene classifications
+            if scene_analysis.get("scene_type"):
+                try:
+                    scene_classification = SceneClassification(
+                        image_id=image_id,  # Use the stored image_id
+                        scene_type=scene_analysis["scene_type"],
+                        confidence=scene_analysis["confidence"]
+                    )
+                    session.add(scene_classification)
+                except Exception as e:
+                    logger.error(f"Failed to save scene classification for {image_path.name}: {e}")
 
+            # Final flush to ensure all records are saved
+            logger.info(f"Attempting to commit session for image: {image_path} (ID: {image_id})")
             await session.commit()
-            
-            # Return the ID of the saved image record
-            return image_record.id
+            logger.info(f"Session committed successfully for image: {image_path} (ID: {image_id})")
+
+            logger.info(f"Successfully completed analysis for {image_path.name}")
+            return image_id
 
         except Exception as e:
-            logger.error(f"Error analyzing image {image_path}: {str(e)}")
-            await session.rollback()  # Rollback the transaction
-            
-            # Return a dictionary with error information
-            if isinstance(image_path, (str, Path)):
-                filename = Path(image_path).name
-            else:
-                filename = "unknown"
-                
-            return {
-                "error": str(e),
-                "filename": filename
-            }
+            logger.exception(f"Error analyzing image {image_path}: {str(e)}")
+            raise  # Re-raise the exception to be handled by the caller
 
     async def analyze_image(self, image_path: Path) -> Dict[str, Any]:
         """

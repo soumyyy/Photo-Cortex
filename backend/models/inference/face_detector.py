@@ -131,11 +131,20 @@ class FaceDetector:
     async def _update_face_db(self, new_embedding: np.ndarray, image_id: int, bbox: np.ndarray, landmarks: np.ndarray, confidence: float, db_session=None) -> Tuple[int, int]:
         """Update face database with new embedding and persist to SQL database.
         Returns a tuple of (identity_id, detection_id) if a match is found or a new identity is created."""
-        try:
-            if db_session is None:
-                logger.error("No database session provided")
-                return None, None
+        
+        if not isinstance(image_id, int):
+            logger.error(f"Invalid image_id type: {type(image_id)}")
+            return None, None
+            
+        if db_session is None:
+            logger.error("No database session provided")
+            return None, None
+            
+        if new_embedding is None or not isinstance(new_embedding, np.ndarray):
+            logger.error(f"Invalid embedding type: {type(new_embedding)}")
+            return None, None
 
+        try:
             # Query existing face identities
             query = select(FaceIdentity)
             result = await db_session.execute(query)
@@ -189,11 +198,14 @@ class FaceDetector:
             return identity_id, detection.id
 
         except Exception as e:
-            logger.error(f"Error updating face database: {e}")
+            logger.error(f"Error updating face database for image {image_id}: {str(e)}")
+            # Rollback the session in case of error
+            await db_session.rollback()
             return None, None
 
     async def detect_faces(self, image: np.ndarray, image_id: int, db_session=None) -> Dict:
         """Detect faces in an image and extract embeddings."""
+        logger.info(f"Entered detect_faces for image_id: {image_id} (type: {type(image_id)}) with session: {db_session} (type: {type(db_session)}) image shape: {image.shape} (type: {type(image)})")
         try:
             if self.app is None:
                 raise ValueError("Face detector not properly initialized")
@@ -235,6 +247,10 @@ class FaceDetector:
                     
                 # Save face crop only after we have the detection_id
                 face_id = self._save_face_crop(image, face.bbox, image_id, detection_id)
+                
+                logger.debug(f"Processing face object: type={type(face)}, attributes={hasattr(face, 'bbox')}, det_score={hasattr(face, 'det_score')}, embedding={hasattr(face, 'embedding')}, kps={hasattr(face, 'kps')}")
+                if hasattr(face, 'bbox'):
+                    logger.debug(f"Face bbox type: {type(face.bbox)}, value: {face.bbox}")
                 
                 results.append({
                     "confidence": float(face.det_score),
@@ -286,9 +302,6 @@ class FaceDetector:
             if face_img.size == 0:
                 logger.error("Empty face crop")
                 return None
-            
-            # Convert RGB to BGR for OpenCV
-            face_img = cv2.cvtColor(face_img, cv2.COLOR_RGB2BGR)
             
             # Construct face image path
             face_id = f"face_{image_id}_{detection_id}"

@@ -26,7 +26,7 @@ import pytz
 from fractions import Fraction
 import time
 from sqlalchemy import select, func, distinct, delete
-from database.models import Image as DBImage, TextDetection, ObjectDetection, SceneClassification, FaceIdentity, FaceDetection
+from database.models import Image as DBImage, TextDetection, ObjectDetection, SceneClassification, FaceIdentity, FaceDetection, ExifMetadata
 from fastapi.responses import JSONResponse
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
@@ -37,53 +37,21 @@ from werkzeug.utils import secure_filename
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(message)s',  # Just the message, no level or timestamps
+    level=logging.DEBUG,
     handlers=[
         logging.StreamHandler(),  # Console output
         logging.FileHandler('app.log')  # File output with full details
-    ]
+    ],
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Set more detailed format for file handler only
-for handler in logging.root.handlers:
-    if isinstance(handler, logging.FileHandler):
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# Configure individual loggers
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)  # Show SQL queries
+logging.getLogger('uvicorn.access').setLevel(logging.INFO)
+logging.getLogger('fastapi').setLevel(logging.INFO)
+logging.getLogger('models').setLevel(logging.DEBUG)  # Show model operations
 
-# Completely silence SQLAlchemy logging for console output
-logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)  # Most aggressive setting
-logging.getLogger('sqlalchemy.engine').setLevel(logging.CRITICAL)
-logging.getLogger('sqlalchemy.pool').setLevel(logging.CRITICAL)
-logging.getLogger('sqlalchemy.dialects').setLevel(logging.CRITICAL)
-logging.getLogger('sqlalchemy.orm').setLevel(logging.CRITICAL)
-
-# Silence other verbose loggers
-logging.getLogger('uvicorn').setLevel(logging.ERROR)
-logging.getLogger('fastapi').setLevel(logging.ERROR)
-logging.getLogger('models').setLevel(logging.WARNING)
-
-# Create a custom filter for our application logs
-class HumanReadableFilter(logging.Filter):
-    def filter(self, record):
-        # Block all SQLAlchemy logs
-        if record.name.startswith('sqlalchemy'):
-            return False
-        
-        # Allow only specific log messages that are human-readable summaries
-        if hasattr(record, 'human_readable') and record.human_readable:
-            return True
-            
-        # Block most other logs
-        if record.levelno < logging.WARNING:
-            return False
-            
-        return True
-
-# Apply the filter to the console handler
-for handler in logging.root.handlers:
-    if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
-        handler.addFilter(HumanReadableFilter())
-
+# Get the main logger
 logger = logging.getLogger(__name__)
 
 # Helper function for human-readable logs
@@ -202,7 +170,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 # Initialize the analyzer only once
-from models.inference import ImageAnalyzer
+from models.inference.image_analyzer import ImageAnalyzer
 analyzer = ImageAnalyzer()
 log_human_readable("PhotoCortex models loaded and ready")
 
@@ -232,6 +200,8 @@ APP_CONFIG = {
 # Ensure directories exist
 IMAGES_DIR = Path(APP_CONFIG["IMAGES_DIR"]).resolve()
 os.makedirs(IMAGES_DIR, exist_ok=True)
+FACES_DIR = Path(APP_CONFIG["FACES_DIR"]).resolve()
+os.makedirs(FACES_DIR, exist_ok=True)
 
 @app.get("/config")
 async def get_config():
@@ -323,35 +293,37 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
         
         for image_path in batch:
             try:
+                # Convert string path to Path object
+                image_path_obj = Path(str(image_path)).resolve()
                 # Check if image already exists in database
-                existing_image = await db_service.get_image_by_filename(image_path.name)
+                existing_image = await db_service.get_image_by_filename(image_path_obj.name)
                 is_cached = False
                 if existing_image:
                     # Get cached analysis results
                     cached_result = await db_service.get_image_analysis(existing_image.id)
                     if cached_result:
-                        logger.info(f"Using cached analysis for {image_path.name}")
+                        logger.info(f"Using cached analysis for {image_path_obj.name}")
                         # Use the cached result directly
                         analysis_data = cached_result
                         # Include the filename in the analysis data
-                        analysis_data["filename"] = image_path.name
+                        analysis_data["filename"] = image_path_obj.name
                         # Add to results without nesting under "analysis"
                         results.append(analysis_data)
                         is_cached = True
                     else:
-                        logger.warning(f"Cached image found for {image_path.name} but failed to get analysis.")
+                        logger.warning(f"Cached image found for {image_path_obj.name} but failed to get analysis.")
                         # Proceed to re-analyze if cache retrieval failed
                         is_cached = False
                 else:
                     is_cached = False
 
                 if not is_cached:
-                    logger.info(f"Analyzing image: {image_path.name}")
+                    logger.info(f"Analyzing image: {image_path_obj.name}")
                     # Get a session from the database service
                     session = await db_service.get_session()
                     try:
                         # Analyze image with session (this saves to DB and returns image_id)
-                        saved_result = await analyzer.analyze_image_with_session(str(image_path), session)
+                        saved_result = await analyzer.analyze_image_with_session(image_path_obj, session)
                         
                         # Check if we got a valid image ID or an error dictionary
                         if isinstance(saved_result, int):
@@ -359,70 +331,53 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
                             analysis_data = await db_service.get_image_analysis(saved_result)
                             if analysis_data:
                                 # Include the filename in the analysis data
-                                analysis_data["filename"] = image_path.name
+                                analysis_data["filename"] = image_path_obj.name
                                 # Add to results without nesting under "analysis"
                                 results.append(analysis_data)
                             else:
-                                logger.error(f"Failed to retrieve analysis for {image_path.name} after saving (ID: {saved_result})")
-                                # Handle error case, yield an error status
+                                logger.error(f"Failed to retrieve analysis for {image_path_obj.name} after saving (ID: {saved_result})")
                                 error_progress = {
                                     "progress": min(100, int((len(results) / total_files) * 100)),
                                     "current": len(results),
                                     "total": total_files,
-                                    "filename": image_path.name,
-                                    "error": f"Failed to retrieve analysis after saving",
+                                    "filename": image_path_obj.name,
+                                    "error": "Failed to retrieve analysis after saving",
                                     "complete": False
                                 }
                                 yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
-                        elif isinstance(saved_result, dict) and 'error' in saved_result:
-                            # This is an error case from analyze_image_with_session
-                            logger.error(f"Error analyzing image {image_path.name}: {saved_result['error']}")
-                            error_progress = {
-                                "progress": min(100, int((len(results) / total_files) * 100)),
-                                "current": len(results),
-                                "total": total_files,
-                                "filename": image_path.name,
-                                "error": saved_result['error'],
-                                "complete": False
-                            }
-                            yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
-                        else:
-                            logger.error(f"Failed to analyze and save image {image_path.name}, unexpected result: {saved_result}")
-                            # Handle error case, yield an error status
-                            error_progress = {
-                                "progress": min(100, int((len(results) / total_files) * 100)),
-                                "current": len(results),
-                                "total": total_files,
-                                "filename": image_path.name,
-                                "error": "Unknown error during analysis",
-                                "complete": False
-                            }
-                            yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
                     except Exception as e:
-                        logger.exception(f"Error during analysis or retrieval for {image_path.name}")
-                        # Handle error case
+                        logger.exception(f"Error during analysis or retrieval for {image_path_obj.name}")
+                        await session.rollback()
+                        error_progress = {
+                            "progress": min(100, int((len(results) / total_files) * 100)),
+                            "current": len(results),
+                            "total": total_files,
+                            "filename": image_path_obj.name,
+                            "error": str(e),
+                            "complete": False
+                        }
+                        yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
                     finally:
-                        await session.close() # Ensure session is closed
-
+                        await session.close()
                 # Send progress update regardless of cache status
                 progress = {
                     "progress": min(100, int((len(results) / total_files) * 100)),
                     "current": len(results),
                     "total": total_files,
-                    "filename": image_path.name,
+                    "filename": image_path_obj.name,
                     "cached": is_cached,
                     "complete": False
                 }
                 yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
 
             except Exception as e:
-                logger.exception(f"Error processing {image_path.name}: {e}")
+                logger.exception(f"Error processing {image_path_obj.name}: {e}")
                 # Yield error status for this specific file
                 error_progress = {
                     "progress": min(100, int((len(results) / total_files) * 100)),
                     "current": len(results),
                     "total": total_files,
-                    "filename": image_path.name,
+                    "filename": image_path_obj.name,
                     "error": str(e),
                     "complete": False
                 }
@@ -447,14 +402,14 @@ async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
         image = await db_service.get_image_by_filename(filename)
         if not image:
             return JSONResponse(
-                status_code=404,
+                status_code=404, 
                 content={"error": f"No analysis found for image: {filename}"}
             )
         
         analysis = await db_service.get_image_analysis(image.id)
         if not analysis:
             return JSONResponse(
-                status_code=404,
+                status_code=404, 
                 content={"error": f"No analysis found for image: {filename}"}
             )
             
@@ -465,7 +420,7 @@ async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error retrieving analysis for {filename}: {e}")
         return JSONResponse(
-            status_code=500,
+            status_code=500, 
             content={"error": f"Failed to retrieve analysis: {str(e)}"}
         )
 
@@ -515,7 +470,7 @@ async def get_unique_faces(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting unique faces: {e}")
         return JSONResponse(
-            status_code=500,
+            status_code=500, 
             content={"error": str(e)}
         )
 
@@ -835,7 +790,6 @@ async def reprocess_face_identities(
 
         return JSONResponse(
             content={
-                "success": True,
                 "message": "Face identities reprocessed successfully",
                 "stats": stats
             }
@@ -1023,6 +977,101 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
     except Exception as e:
         logger.error(f"Recutting failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/delete-image/{image_id}", status_code=status.HTTP_200_OK)
+async def delete_image_endpoint(
+    image_id: int = Depends(lambda image_id: int(image_id)), # Ensures path param is int
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete an image, its associated analysis data from the database,
+    and the corresponding image files (original and face cutouts) from the filesystem.
+    """
+    logger.info(f"Attempting to delete image with ID: {image_id}")
+
+    # --- 1. Fetch Image Record and Related Data --- 
+    # Use selectinload to efficiently fetch related face detections needed for file deletion
+    stmt = (
+        select(DBImage)
+        .options(selectinload(DBImage.face_detections))
+        .where(DBImage.id == image_id)
+    )
+    result = await db.execute(stmt)
+    image_record = result.scalar_one_or_none()
+
+    if not image_record:
+        logger.warning(f"Image with ID {image_id} not found for deletion.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Image with ID {image_id} not found")
+
+    image_filename = image_record.filename
+    # Store face detection IDs *before* deleting the records
+    face_detection_ids = [face.id for face in image_record.face_detections]
+
+    logger.debug(f"Found image record: {image_filename}. Found {len(face_detection_ids)} associated face detections.")
+
+    # --- 2. Delete Database Records --- 
+    try:
+        # Explicitly delete related data first (safer than relying solely on cascade)
+        # Note: Adjust if your models use different relationship names or tables
+        related_tables = [
+            FaceDetection, ObjectDetection, TextDetection, 
+            SceneClassification, ExifMetadata
+        ]
+        for table in related_tables:
+            delete_stmt = delete(table).where(table.image_id == image_id)
+            await db.execute(delete_stmt)
+            logger.debug(f"Executed delete for {table.__tablename__} related to image ID {image_id}.")
+
+        # Now delete the main Image record
+        await db.delete(image_record)
+        logger.debug(f"Deleted image record for image ID {image_id}.")
+
+        await db.commit()
+        logger.info(f"Successfully deleted database records for image ID {image_id}.")
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Database error during deletion for image ID {image_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error during deletion: {str(e)}")
+
+    # --- 3. Delete Filesystem Files --- 
+    deleted_files = []
+    failed_files = []
+
+    # Delete original image file
+    original_image_path = IMAGES_DIR / image_filename
+    try:
+        if original_image_path.is_file():
+            original_image_path.unlink()
+            logger.info(f"Deleted original image file: {original_image_path}")
+            deleted_files.append(str(original_image_path))
+        else:
+            logger.warning(f"Original image file not found (or not a file), skipping deletion: {original_image_path}")
+    except Exception as e:
+        logger.error(f"Error deleting original image file {original_image_path}: {e}")
+        failed_files.append(str(original_image_path))
+
+    # Delete face cutout files
+    for detection_id in face_detection_ids:
+        # Construct filename based on the format used in _save_face_crop
+        face_filename = f"face_{image_id}_{detection_id}.jpg"
+        face_image_path = FACES_DIR / face_filename
+        try:
+            if face_image_path.is_file():
+                face_image_path.unlink()
+                logger.info(f"Deleted face cutout file: {face_image_path}")
+                deleted_files.append(str(face_image_path))
+            else:
+                 logger.warning(f"Face cutout file not found (or not a file), skipping deletion: {face_image_path}")
+        except Exception as e:
+            logger.error(f"Error deleting face cutout file {face_image_path}: {e}")
+            failed_files.append(str(face_image_path))
+
+    response_detail = f"Image ID {image_id} ({image_filename}) and associated data deleted."
+    if failed_files:
+        response_detail += f" Failed to delete files: {', '.join(failed_files)}"
+
+    return {"message": response_detail, "deleted_db_records": True, "deleted_files": deleted_files, "failed_files": failed_files}
 
 if __name__ == "__main__":
     import uvicorn
