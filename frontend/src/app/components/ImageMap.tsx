@@ -24,20 +24,19 @@ const ImageMap = ({ images, singleLocation }: ImageMapProps) => {
 
   useEffect(() => {
     if (singleLocation) {
-      console.log('ImageMap: Setting up single location:', singleLocation);
-      // Handle single location
+      // For single location, create a tight bounds around the point
+      const lat = singleLocation.latitude;
+      const lng = singleLocation.longitude;
       const newConfig: MapBounds = {
-        center: [singleLocation.latitude, singleLocation.longitude],
+        center: [lat, lng],
         bounds: [
-          [singleLocation.latitude - 0.001, singleLocation.longitude - 0.001],
-          [singleLocation.latitude + 0.001, singleLocation.longitude + 0.001]
+          [lat - 0.0001, lng - 0.0001],
+          [lat + 0.0001, lng + 0.0001]
         ]
       };
       setMapConfig(newConfig);
     } else if (images && images.length > 0) {
-      // Handle multiple locations
       const withGps = images.filter(img => img.metadata.gps !== null);
-      console.log('ImageMap: Images with GPS:', withGps.length);
       
       if (withGps.length > 0) {
         const lats = withGps.map(img => img.metadata.gps!.latitude);
@@ -55,7 +54,6 @@ const ImageMap = ({ images, singleLocation }: ImageMapProps) => {
           center: [centerLat, centerLng],
           bounds: [[minLat, minLng], [maxLat, maxLng]]
         };
-        console.log('ImageMap: Setting map config:', newConfig);
         setMapConfig(newConfig);
       }
     }
@@ -71,9 +69,9 @@ const ImageMap = ({ images, singleLocation }: ImageMapProps) => {
   }
 
   return (
-    <div className="relative h-[800px] w-full rounded-lg overflow-hidden bg-gray-900">
+    <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-900" style={{ minHeight: '200px' }}>
       {mapConfig && (
-        <div className="absolute inset-0" style={{ zIndex: 1 }}>
+        <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
           <MapClient 
             images={images} 
             config={mapConfig}

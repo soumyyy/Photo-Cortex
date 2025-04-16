@@ -190,36 +190,46 @@ export default function Home() {
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
       <div className="max-w-screen-2xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-3xl font-semibold text-white/90 mb-2">PhotoCortex</h1>
-            <p className="text-sm text-white/60">AI-Powered Image Analysis</p>
-          </div>
-          {loading && (
-            <div className="glass-panel px-4 py-2 rounded-xl text-sm text-white/70">
-              Processing {processedCount} of {totalImages} images ({Math.round(progress)}%)
+        {/* Header with title and progress */}
+        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg px-6 py-4 -mx-6 mb-8">
+          <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
+            <div className="flex items-center space-x-8">
+              <div>
+                <h1 className="text-2xl font-semibold text-white/90">PhotoCortex</h1>
+                <p className="text-sm text-white/60">AI-Powered Image Analysis</p>
+              </div>
+              {loading && (
+                <div className="glass-panel px-4 py-2 rounded-xl flex items-center space-x-3">
+                  <div className="relative w-4 h-4">
+                    <div className="w-full h-full rounded-full border-2 border-t-white/40 animate-spin" />
+                  </div>
+                  <span className="text-sm text-white/70">
+                    {processedCount} of {totalImages} ({Math.round(progress)}%)
+                  </span>
+                </div>
+              )}
             </div>
-          )}
+            <div className="flex items-center space-x-4">
+              {loading && (
+                <div className="glass-panel p-1 rounded-full overflow-hidden">
+                  <div 
+                    className="h-1 bg-white/20 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/20 to-white/30 animate-shimmer" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Progress Bar */}
-        {loading && (
-          <div className="glass-panel p-1 rounded-full mb-12 overflow-hidden">
-            <div 
-              className="h-1 bg-white/20 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/20 to-white/30 animate-shimmer" />
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="mb-8 p-4 glass-panel rounded-xl border-red-500/20 text-red-400/90">
             {error}
           </div>
         )}
-
+        
         <Tab.Group>
           <Tab.List className="flex space-x-4 mb-12 px-1">
             {tabs.map((tab, index) => (
