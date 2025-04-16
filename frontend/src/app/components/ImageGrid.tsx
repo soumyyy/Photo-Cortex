@@ -43,7 +43,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
   const [selectedFace, setSelectedFace] = useState<Face | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-  const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({});
   const [showFaceOverlay, setShowFaceOverlay] = useState(false);
   const [config, setConfig] = useState<{ API_BASE_URL: string }>({ API_BASE_URL: 'http://localhost:8000' });
   const [isScanning, setIsScanning] = useState<string | null>(null); // Track scanning state by image filename
@@ -102,11 +101,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
       .catch(err => console.error('Failed to fetch config:', err));
   }, []);
 
-  const getImageUrl = (filename: string) => {
-    // Ensure the filename is properly encoded
-    const encodedFilename = encodeURIComponent(filename);
-    return `${config.API_BASE_URL}/images/${encodedFilename}`;
-  };
+  const getImageUrl = (filename: string) => `${config.API_BASE_URL}/image/${encodeURIComponent(filename)}`;
 
   const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.target as HTMLImageElement;
@@ -297,91 +292,58 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
     setSelectedFace(null);  // Reset selected face when image changes
   }, [selectedImage]);
 
-  const ImageSkeleton = () => (
-    <div className="relative aspect-square w-full h-full overflow-hidden rounded-lg bg-[#0a0a0a]">
-      <div className="absolute inset-0 animate-pulse">
-        <div className="h-full w-full bg-gradient-to-b from-[#111111] to-[#0a0a0a]" />
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4">
-        <div className="h-4 w-2/3 bg-[#111111] rounded animate-pulse mb-2" />
-        <div className="h-3 w-1/3 bg-[#111111] rounded animate-pulse opacity-70" />
-      </div>
+  const renderImagePreview = (image: ImageAnalysis) => (
+    <div className="relative w-full h-full">
+      <Image 
+        src={getImageUrl(image.filename)}
+        alt={image.filename}
+        className={`object-cover transition-all duration-500 ${
+          showTextOverlays[image.filename] ? 'image-dimmed' : ''
+        }`}
+        fill
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+        priority={false}
+        loading="lazy"
+        quality={75}
+        unoptimized={true}
+        onLoad={handleImageLoad}
+        onError={(e) => {
+          console.error(`Failed to load image: ${image.filename}`, e);
+        }}
+      />
+      {image.cached && (
+        <div className="absolute top-2 right-2 bg-blue-500/80 text-white text-xs px-2 py-1 rounded-full">
+          Cached
+        </div>
+      )}
     </div>
   );
-
-  const renderImagePreview = (image: ImageAnalysis) => {
-    const imageUrl = getImageUrl(image.filename);
-    const isLoading = loadingStates[image.filename] ?? true;
-
-    return (
-      <div 
-        ref={el => {
-          imageRefs.current[image.filename] = el;
-        }}
-        data-filename={image.filename}
-        className="relative aspect-square w-full h-full overflow-hidden rounded-lg bg-gray-900/20"
-      >
-        {isLoading && <ImageSkeleton />}
-        <Image
-          src={imageUrl}
-          alt={image.filename}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className={`object-cover transition-all duration-300 z-10 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-          loading="lazy"
-          unoptimized
-          onLoadingComplete={() => {
-            setLoadingStates(prev => ({ ...prev, [image.filename]: false }));
-          }}
-          onError={(e) => {
-            console.error(`Failed to load image: ${image.filename}`, e);
-            setLoadingStates(prev => ({ ...prev, [image.filename]: false }));
-          }}
-        />
-      </div>
-    );
-  };
-
-  const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    if (!selectedImage) return;
-    
-    const currentIndex = images.findIndex(img => img.filename === selectedImage.filename);
-    if (e.key === 'ArrowLeft' && currentIndex > 0) {
-      setSelectedImage(images[currentIndex - 1]);
-      setShowFaceOverlay(false);
-      setSelectedFace(null);
-    } else if (e.key === 'ArrowRight' && currentIndex < images.length - 1) {
-      setSelectedImage(images[currentIndex + 1]);
-      setShowFaceOverlay(false);
-      setSelectedFace(null);
-    } else if (e.key === 'Escape') {
-      setSelectedImage(null);
-      setShowFaceOverlay(false);
-      setSelectedFace(null);
-    }
-  }, [selectedImage, images]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [handleKeyPress]);
 
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-8 sm:px-6 sm:py-12">
       <Toaster />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 auto-rows-fr">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 p-2 w-full">
         {images.map((image) => (
           <div 
             key={image.filename}
-            className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] aspect-square transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02] min-w-[150px]"
+            ref={(el) => {
+              imageRefs.current[image.filename] = el;
+            }}
+            className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0a0a0a] aspect-square transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 border border-white/[0.02]"
+            data-filename={image.filename}
+            style={{ maxWidth: '300px' }}
             onClick={() => setSelectedImage(image)}
           >
-            {renderImagePreview(image)}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+            {Array.from(loadedImages).includes(image.filename) ? (
+              renderImagePreview(image)
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="animate-pulse bg-[#111111] w-full h-full" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
               <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
-                <p className="text-sm font-medium text-white/90 mb-1">{image.filename}</p>
+                <p className="text-sm font-medium text-white/90 truncate mb-1">{image.filename}</p>
                 <p className="text-xs text-white/70">{image.scene_classification?.scene_type}</p>
                 {image.cached && (
                   <span className="text-blue-300 text-xs">

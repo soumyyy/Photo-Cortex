@@ -312,6 +312,7 @@ async def analyze_image(
                     "faces": analysis.get("faces", []),
                     "objects": analysis.get("objects", []),
                     "scene_classification": analysis.get("scene_classification"),
+                    "text_recognition": analysis.get("text_recognition", {}),
                     "cached": True
                 })
 
@@ -322,6 +323,7 @@ async def analyze_image(
         faces = await analyzer.detect_faces(str(image_path))
         objects = await analyzer.detect_objects(str(image_path))
         scene = await analyzer.classify_scene(str(image_path))
+        text_recognition = await analyzer.text_recognizer.detect_text(str(image_path))
         
         # Create analysis result
         analysis_result = {
@@ -330,6 +332,7 @@ async def analyze_image(
             "faces": faces,
             "objects": objects,
             "scene_classification": scene,
+            "text_recognition": text_recognition,
             "cached": False
         }
         
@@ -339,7 +342,8 @@ async def analyze_image(
             metadata=metadata,
             faces=faces,
             objects=objects,
-            scene_classification=scene
+            scene_classification=scene,
+            text_recognition=text_recognition
         )
         
         # Use NumpyJSONEncoder to handle numpy arrays and special types
