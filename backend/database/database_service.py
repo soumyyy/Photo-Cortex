@@ -50,24 +50,20 @@ class DatabaseService:
                         if key not in ['filename', 'faces', 'objects', 'text_recognition', 'scene_classification'] and hasattr(existing_image, key):
                             setattr(existing_image, key, value)
                     
-                    # Update or create EXIF metadata
-                    if filtered_exif:
-                        if existing_image.exif_metadata:
-                            for key, value in filtered_exif.items():
-                                if value is not None:
-                                    setattr(existing_image.exif_metadata, key, value)
-                        else:
-                            exif = ExifMetadata(
-                                image_id=existing_image.id,
-                                **filtered_exif
-                            )
-                            session.add(exif)
-                    
                     # Delete existing analysis data
+                    await session.execute(delete(ExifMetadata).where(ExifMetadata.image_id == existing_image.id))
                     await session.execute(delete(FaceDetection).where(FaceDetection.image_id == existing_image.id))
                     await session.execute(delete(ObjectDetection).where(ObjectDetection.image_id == existing_image.id))
                     await session.execute(delete(TextDetection).where(TextDetection.image_id == existing_image.id))
                     await session.execute(delete(SceneClassification).where(SceneClassification.image_id == existing_image.id))
+                    
+                    # Create new EXIF metadata if we have data
+                    if filtered_exif:
+                        exif = ExifMetadata(
+                            image_id=existing_image.id,
+                            **filtered_exif
+                        )
+                        session.add(exif)
                     
                     image = existing_image
                 else:

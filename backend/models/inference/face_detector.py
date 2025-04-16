@@ -209,32 +209,47 @@ class FaceDetector:
         try:
             if self.app is None:
                 raise ValueError("Face detector not properly initialized")
-                
+            
+            # Clean up any existing face cutouts for this image first
+            for face_file in self.faces_dir.glob(f"face_{image_id}_*.jpg"):
+                try:
+                    face_file.unlink()
+                    logger.debug(f"Deleted old face cutout: {face_file}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete face cutout {face_file}: {e}")
+
             # Convert image to RGB if needed
             if len(image.shape) == 2:  # Grayscale
                 image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-            elif image.shape[2] == 4:  # RGBA
-                image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
-            elif image.shape[2] == 3 and image.dtype == np.uint8:
-                pass  # Already RGB
+            elif len(image.shape) == 3 and image.shape[2] == 3:
+                if image.dtype == np.uint8:
+                    # Already RGB
+                    pass
+                else:
+                    # Convert to uint8 if needed
+                    image = (image * 255).astype(np.uint8)
             else:
-                raise ValueError(f"Unsupported image format: {image.shape}, {image.dtype}")
+                raise ValueError(f"Unsupported image format: {image.shape}")
 
             # Detect faces
             faces = self.app.get(image)
+            if not faces:
+                logger.info(f"No faces detected in image {image_id}")
+                return {
+                    "faces_detected": False,
+                    "face_count": 0,
+                    "faces": []
+                }
+
             results = []
-            
             for face in faces:
                 # Calculate smile intensity and eye status
                 smile_intensity = self.calculate_smile_intensity(face.kps)
                 eye_status = self.calculate_eye_status(face.kps)
                 
-                # Get embedding for face recognition
-                embedding = face.embedding
-                
-                # Update face database
+                # Update face database and get identity
                 identity_id, detection_id = await self._update_face_db(
-                    embedding,
+                    face.embedding,
                     image_id,
                     face.bbox,
                     face.kps,
@@ -247,10 +262,6 @@ class FaceDetector:
                     
                 # Save face crop only after we have the detection_id
                 face_id = self._save_face_crop(image, face.bbox, image_id, detection_id)
-                
-                logger.debug(f"Processing face object: type={type(face)}, attributes={hasattr(face, 'bbox')}, det_score={hasattr(face, 'det_score')}, embedding={hasattr(face, 'embedding')}, kps={hasattr(face, 'kps')}")
-                if hasattr(face, 'bbox'):
-                    logger.debug(f"Face bbox type: {type(face.bbox)}, value: {face.bbox}")
                 
                 results.append({
                     "confidence": float(face.det_score),

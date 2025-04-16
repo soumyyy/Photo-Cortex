@@ -980,17 +980,16 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
 
 @app.delete("/delete-image/{image_id}", status_code=status.HTTP_200_OK)
 async def delete_image_endpoint(
-    image_id: int = Depends(lambda image_id: int(image_id)), # Ensures path param is int
+    image_id: int = Depends(lambda image_id: int(image_id)), 
     db: AsyncSession = Depends(get_db)
 ):
     """
     Delete an image, its associated analysis data from the database,
-    and the corresponding image files (original and face cutouts) from the filesystem.
+    any orphaned FaceIdentity records, and the corresponding image files (original and face cutouts) from the filesystem.
     """
     logger.info(f"Attempting to delete image with ID: {image_id}")
 
     # --- 1. Fetch Image Record and Related Data --- 
-    # Use selectinload to efficiently fetch related face detections needed for file deletion
     stmt = (
         select(DBImage)
         .options(selectinload(DBImage.face_detections))
@@ -1004,15 +1003,12 @@ async def delete_image_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Image with ID {image_id} not found")
 
     image_filename = image_record.filename
-    # Store face detection IDs *before* deleting the records
     face_detection_ids = [face.id for face in image_record.face_detections]
-
+    face_identity_ids = [face.identity_id for face in image_record.face_detections if face.identity_id is not None]
     logger.debug(f"Found image record: {image_filename}. Found {len(face_detection_ids)} associated face detections.")
 
     # --- 2. Delete Database Records --- 
     try:
-        # Explicitly delete related data first (safer than relying solely on cascade)
-        # Note: Adjust if your models use different relationship names or tables
         related_tables = [
             FaceDetection, ObjectDetection, TextDetection, 
             SceneClassification, ExifMetadata
@@ -1021,24 +1017,40 @@ async def delete_image_endpoint(
             delete_stmt = delete(table).where(table.image_id == image_id)
             await db.execute(delete_stmt)
             logger.debug(f"Executed delete for {table.__tablename__} related to image ID {image_id}.")
-
-        # Now delete the main Image record
         await db.delete(image_record)
         logger.debug(f"Deleted image record for image ID {image_id}.")
-
         await db.commit()
         logger.info(f"Successfully deleted database records for image ID {image_id}.")
-
     except Exception as e:
         await db.rollback()
         logger.exception(f"Database error during deletion for image ID {image_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error during deletion: {str(e)}")
 
-    # --- 3. Delete Filesystem Files --- 
+    # --- 3. Delete Orphaned FaceIdentity Records ---
+    deleted_identities = []
+    try:
+        if face_identity_ids:
+            for identity_id in set(face_identity_ids):
+                # Check if this identity is still referenced by any FaceDetection
+                check_stmt = select(FaceDetection).where(FaceDetection.identity_id == identity_id)
+                result = await db.execute(check_stmt)
+                still_exists = result.scalar_one_or_none()
+                if not still_exists:
+                    # Delete the orphaned FaceIdentity
+                    identity = await db.get(FaceIdentity, identity_id)
+                    if identity:
+                        await db.delete(identity)
+                        deleted_identities.append(identity_id)
+            if deleted_identities:
+                await db.commit()
+                logger.info(f"Deleted orphaned FaceIdentity records: {deleted_identities}")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error deleting orphaned FaceIdentity records: {e}")
+
+    # --- 4. Delete Filesystem Files --- 
     deleted_files = []
     failed_files = []
-
-    # Delete original image file
     original_image_path = IMAGES_DIR / image_filename
     try:
         if original_image_path.is_file():
@@ -1050,10 +1062,7 @@ async def delete_image_endpoint(
     except Exception as e:
         logger.error(f"Error deleting original image file {original_image_path}: {e}")
         failed_files.append(str(original_image_path))
-
-    # Delete face cutout files
     for detection_id in face_detection_ids:
-        # Construct filename based on the format used in _save_face_crop
         face_filename = f"face_{image_id}_{detection_id}.jpg"
         face_image_path = FACES_DIR / face_filename
         try:
@@ -1066,12 +1075,12 @@ async def delete_image_endpoint(
         except Exception as e:
             logger.error(f"Error deleting face cutout file {face_image_path}: {e}")
             failed_files.append(str(face_image_path))
-
     response_detail = f"Image ID {image_id} ({image_filename}) and associated data deleted."
+    if deleted_identities:
+        response_detail += f" Deleted orphaned FaceIdentity IDs: {deleted_identities}."
     if failed_files:
         response_detail += f" Failed to delete files: {', '.join(failed_files)}"
-
-    return {"message": response_detail, "deleted_db_records": True, "deleted_files": deleted_files, "failed_files": failed_files}
+    return {"message": response_detail, "deleted_db_records": True, "deleted_files": deleted_files, "failed_files": failed_files, "deleted_identities": deleted_identities}
 
 if __name__ == "__main__":
     import uvicorn

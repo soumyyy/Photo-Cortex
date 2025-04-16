@@ -17,6 +17,7 @@ import datetime
 from geoalchemy2.shape import WKTElement
 from sqlalchemy import select, delete
 from sqlalchemy.future import select
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +54,44 @@ class ImageAnalyzer:
             image_record = result.scalar_one_or_none()
 
             if image_record:
-                logger.info(f"Image {image_path.name} already exists in DB with ID: {image_record.id}. Re-analyzing.")
+                logger.info(f"Image {image_path.name} already exists in DB with ID: {image_record.id}. Cleaning up old analysis and cutouts.")
                 image_id = image_record.id
-                # Load image bytes since we didn't create the record and need it for analysis
+
+                # --- Clean up old face cutout files first ---
+                faces_dir = self.face_detector.faces_dir
+                if faces_dir.exists():
+                    for face_file in faces_dir.glob(f"face_{image_id}_*.jpg"):
+                        try:
+                            face_file.unlink()
+                            logger.debug(f"Deleted old face cutout: {face_file}")
+                        except Exception as e:
+                            logger.warning(f"Failed to delete face cutout {face_file}: {e}")
+
+                # --- Clean up old analysis records ---
+                try:
+                    # Delete EXIF metadata first (due to foreign key constraints)
+                    await session.execute(delete(ExifMetadata).where(ExifMetadata.image_id == image_id))
+                    await session.flush()  # Ensure EXIF deletion is complete
+                    
+                    # Delete other analysis records
+                    await session.execute(delete(FaceDetection).where(FaceDetection.image_id == image_id))
+                    await session.execute(delete(ObjectDetection).where(ObjectDetection.image_id == image_id))
+                    await session.execute(delete(TextDetection).where(TextDetection.image_id == image_id))
+                    await session.execute(delete(SceneClassification).where(SceneClassification.image_id == image_id))
+                    
+                    await session.commit()  # Commit the deletions
+                    logger.debug(f"Successfully cleaned up old analysis records for image ID {image_id}")
+                except Exception as e:
+                    logger.error(f"Error cleaning up old records: {e}")
+                    await session.rollback()
+                    raise
+
+                # --- Read image for re-analysis ---
                 image = cv2.imread(str(image_path))
                 if image is None:
-                     logger.error(f"Failed to read existing image file: {image_path}")
-                     raise ValueError(f"Failed to read existing image file: {image_path}")
+                    logger.error(f"Failed to read existing image file: {image_path}")
+                    raise ValueError(f"Failed to read existing image file: {image_path}")
+                logger.info(f"Successfully read existing image for re-analysis: {image_path}")
 
             else:
                 logger.info(f"Image {image_path.name} not found in DB. Creating new record.")
@@ -122,11 +154,27 @@ class ImageAnalyzer:
             # --- Run Analysis Models --- (Ensure image and image_id are valid before this)
             try:
                 logger.info(f"Calling detect_text for image_id: {image_id}")
+                # Force initialization check
+                if self.text_recognizer._reader is None:
+                    logger.info("Initializing text recognizer before first use...")
+                    self.text_recognizer.initialize(use_gpu=True)
+                    if self.text_recognizer._reader is None:
+                        raise RuntimeError("Failed to initialize text recognizer")
+                
                 text_analysis = self.text_recognizer.detect_text(image)
-                logger.info(f"Finished detect_text for image_id: {image_id}")
+                if not text_analysis:
+                    raise ValueError("Text recognizer returned empty result")
+                    
+                logger.info(f"Text recognition completed for image_id: {image_id}. Result: {text_analysis.get('text_detected', False)}")
+                if text_analysis.get('error'):
+                    logger.warning(f"Text recognition completed with error: {text_analysis['error']}")
             except Exception as e:
-                logger.error(f"Text recognition failed for {image_path.name}: {e}")
-                text_analysis = {"text_detected": False, "text_blocks": []}
+                logger.error(f"Text recognition failed for {image_path.name}: {e}", exc_info=True)
+                text_analysis = {
+                    "text_detected": False,
+                    "text_blocks": [],
+                    "error": str(e)
+                }
 
             try:
                 logger.info(f"Calling detect_objects for image_id: {image_id}")
@@ -211,18 +259,36 @@ class ImageAnalyzer:
                     logger.error(f"Failed to save EXIF data for {image_path.name}: {e}")
 
             # Save text detections
-            if text_analysis.get("text_detected", False):
-                for block in text_analysis.get("text_blocks", []):
+            if text_analysis and text_analysis.get('text_detected'):
+                for block in text_analysis.get('text_blocks', []):
                     try:
+                        # Ensure block has required fields
+                        if not all(k in block for k in ['text', 'confidence', 'bounding_box']):
+                            logger.warning(f"Skipping text block due to missing required fields: {block}")
+                            continue
+                            
+                        # Convert bounding box points to [x1, y1, x2, y2] format
+                        bbox_points = block['bounding_box']  # [[x1,y1], [x2,y1], [x2,y2], [x1,y2]]
+                        if not (isinstance(bbox_points, list) and len(bbox_points) == 4 and 
+                               all(isinstance(p, list) and len(p) == 2 for p in bbox_points)):
+                            logger.warning(f"Invalid bounding box format: {bbox_points}")
+                            continue
+
+                        # Convert to [x1, y1, x2, y2] format
+                        x1, y1 = bbox_points[0]  # Top-left
+                        x2, y2 = bbox_points[2]  # Bottom-right
+                        bbox_json = json.dumps([float(x1), float(y1), float(x2), float(y2)])
+
                         text_detection = TextDetection(
-                            image_id=image_id,  # Use the stored image_id
-                            text=block["text"],
-                            confidence=block["confidence"],
-                            bounding_box=block["bbox"]
+                            image_id=image_id,
+                            text=block['text'],
+                            confidence=float(block['confidence']),
+                            bounding_box=bbox_json
                         )
                         session.add(text_detection)
+                        logger.debug(f"Added text detection: {block['text']} with confidence {block['confidence']}")
                     except Exception as e:
-                        logger.error(f"Failed to save text detection for {image_path.name}: {e}")
+                        logger.error(f"Failed to save text detection for {image_path.name}: {e}", exc_info=True)
 
             # Save object detections
             object_detections = []
