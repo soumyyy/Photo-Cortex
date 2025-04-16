@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tab } from '@headlessui/react';
 import ImageGrid from '@/app/components/ImageGrid';
 import PeopleGrid from '@/app/components/PeopleGrid';
 import ImageMap from '@/app/components/ImageMap';
-import { PhotoIcon, UserGroupIcon, MapIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, UserGroupIcon, MapIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { ImageAnalysis } from './types/ImageAnalysis';
 
 interface TabItem {
@@ -39,7 +39,9 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const [config, setConfig] = useState<{ API_BASE_URL: string }>({ API_BASE_URL: 'http://localhost:8000' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Fetch config from backend
@@ -187,6 +189,63 @@ export default function Home() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // First upload the file
+      const uploadResponse = await fetch(`${config.API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
+
+      // Then analyze just this file
+      const analyzeResponse = await fetch(`${config.API_BASE_URL}/analyze-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filename: file.name }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error('Analysis failed');
+      }
+
+      const result = await analyzeResponse.json();
+      
+      // Add the new image to the existing list
+      setImages(prev => {
+        const newImage = {
+          filename: file.name,
+          metadata: result.metadata || {},
+          faces: result.faces || [],
+          objects: result.objects || [],
+          scene_classification: result.scene_classification || null,
+        };
+        return [...prev, newImage];
+      });
+      
+    } catch (err) {
+      setError('Failed to process image');
+      console.error('Upload/Analysis error:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
       <div className="max-w-screen-2xl mx-auto">
@@ -196,7 +255,7 @@ export default function Home() {
             <div className="flex items-center space-x-8">
               <div>
                 <h1 className="text-2xl font-semibold text-white/90">PhotoCortex</h1>
-                <p className="text-sm text-white/60">AI-Powered Image Analysis</p>
+                <p className="text-sm text-white/60">Computer Vision Analysis</p>
               </div>
               {loading && (
                 <div className="glass-panel px-4 py-2 rounded-xl flex items-center space-x-3">
@@ -210,6 +269,25 @@ export default function Home() {
               )}
             </div>
             <div className="flex items-center space-x-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`glass-panel px-4 py-2 rounded-xl flex items-center space-x-2 transition-all duration-200 ${
+                  uploading ? 'opacity-50' : 'hover:bg-white/5'
+                }`}
+              >
+                <ArrowUpTrayIcon className="w-5 h-5" />
+                <span className="text-sm text-white/90">
+                  {uploading ? 'Uploading...' : 'Upload Image'}
+                </span>
+              </button>
               {loading && (
                 <div className="glass-panel p-1 rounded-full overflow-hidden">
                   <div 
@@ -230,22 +308,24 @@ export default function Home() {
           </div>
         )}
         
-        <Tab.Group>
-          <Tab.List className="flex space-x-4 mb-12 px-1">
-            {tabs.map((tab, index) => (
-              <Tab
-                key={index}
-                className={({ selected }) =>
-                  `flex items-center space-x-3 tab-button ${
-                    selected ? 'tab-button-active' : ''
-                  }`
-                }
-              >
-                <tab.icon className="w-5 h-5" />
-                <span>{tab.name}</span>
-              </Tab>
-            ))}
-          </Tab.List>
+        <Tab.Group defaultIndex={0}>
+          <div className="flex justify-center">
+            <Tab.List className="flex space-x-4 mb-12 px-1">
+              {tabs.map((tab, index) => (
+                <Tab
+                  key={index}
+                  className={({ selected }) =>
+                    `flex items-center space-x-3 tab-button ${
+                      selected ? 'tab-button-active' : ''
+                    } focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black rounded-lg`
+                  }
+                >
+                  <tab.icon className="w-5 h-5" />
+                  <span>{tab.name}</span>
+                </Tab>
+              ))}
+            </Tab.List>
+          </div>
 
           <Tab.Panels className="focus:outline-none">
             <Tab.Panel className="focus:outline-none">

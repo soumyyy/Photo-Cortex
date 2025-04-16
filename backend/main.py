@@ -267,6 +267,168 @@ async def serve_image(image_path: str):
         logger.error(f"Error serving image {image_path}: {e}")
         return JSONResponse(status_code=500, content={"error": f"Failed to serve image: {e}"})
 
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to ensure consistent handling of spaces and special characters."""
+    # Replace spaces with underscores
+    filename = filename.replace(" ", "_")
+    # Remove any other potentially problematic characters
+    filename = "".join(c for c in filename if c.isalnum() or c in "._-")
+    return filename
+
+@app.post("/analyze-image")
+async def analyze_image(
+    file_data: dict,
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """Analyze a single image and return its results."""
+    db_service = DatabaseService(lambda: db)
+    
+    try:
+        filename = file_data.get("filename")
+        if not filename:
+            raise HTTPException(status_code=400, detail="Filename is required")
+            
+        # Sanitize filename before any database operations
+        sanitized_filename = sanitize_filename(filename)
+        image_path = IMAGES_DIR / sanitized_filename
+        
+        if not image_path.exists():
+            # Try with original filename if sanitized version doesn't exist
+            original_path = IMAGES_DIR / filename
+            if not original_path.exists():
+                raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+            else:
+                # If original exists but sanitized doesn't, rename it
+                original_path.rename(image_path)
+                
+        # Use sanitized filename for all database operations
+        image = await db_service.get_image_by_filename(sanitized_filename)
+        if image:
+            analysis = await db_service.get_image_analysis(image.id)
+            if analysis:
+                return JSONResponse(content={
+                    "filename": sanitized_filename,
+                    "metadata": analysis.get("metadata", {}),
+                    "faces": analysis.get("faces", []),
+                    "objects": analysis.get("objects", []),
+                    "scene_classification": analysis.get("scene_classification"),
+                    "cached": True
+                })
+
+        # Extract metadata
+        metadata = extract_image_metadata(image_path)
+        
+        # Analyze image
+        faces = await analyzer.detect_faces(str(image_path))
+        objects = await analyzer.detect_objects(str(image_path))
+        scene = await analyzer.classify_scene(str(image_path))
+        
+        # Create analysis result
+        analysis_result = {
+            "filename": sanitized_filename,
+            "metadata": metadata,
+            "faces": faces,
+            "objects": objects,
+            "scene_classification": scene,
+            "cached": False
+        }
+        
+        # Save to database
+        await db_service.save_image_analysis(
+            filename=sanitized_filename,
+            metadata=metadata,
+            faces=faces,
+            objects=objects,
+            scene_classification=scene
+        )
+        
+        # Use NumpyJSONEncoder to handle numpy arrays and special types
+        return JSONResponse(
+            content=json.loads(json.dumps(analysis_result, cls=NumpyJSONEncoder))
+        )
+        
+    except Exception as e:
+        logger.error(f"Error analyzing image {filename}: {e}")
+        
+        # Even if there was an error, try to get the analysis that was saved
+        try:
+            # Use sanitized filename for DB lookup
+            sanitized_filename = sanitize_filename(filename)
+            image = await db_service.get_image_by_filename(sanitized_filename)
+            if image:
+                # Then get the full analysis
+                analysis = await db_service.get_image_analysis(image.id)
+                if analysis:
+                    logger.info(f"Successfully retrieved analysis for {filename} after error")
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "analysis": analysis,
+                            "warning": "Analysis completed with some errors"
+                        }
+                    )
+        except Exception as db_error:
+            logger.error(f"Failed to get analysis from DB after error: {db_error}")
+        
+        # If we couldn't get the analysis, return the original error
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error analyzing image: {str(e) if str(e) else 'Unknown error'}"
+        )
+
+async def analyze_image_stream(image_files: list, db_service: DatabaseService) -> AsyncGenerator[str, None]:
+    """Stream analysis results for each image."""
+    total_files = len(image_files)
+    results = []
+    
+    for i, image_path in enumerate(image_files):
+        try:
+            # Convert string path to Path object if needed
+            image_path_obj = Path(str(image_path)).resolve()
+            
+            # Get a session from the database service
+            async with await db_service.get_session() as session:
+                # Call analyze-image endpoint for each file
+                analysis = await analyze_image(
+                    {"filename": image_path_obj.name},
+                    session
+                )
+                
+                # Extract content from JSONResponse
+                if isinstance(analysis, JSONResponse):
+                    analysis = json.loads(analysis.body)
+                
+                results.append(analysis)
+                
+                # Send progress update
+                progress = {
+                    "progress": min(100, int(((i + 1) / total_files) * 100)),
+                    "current": i + 1,
+                    "total": total_files,
+                    "filename": image_path_obj.name,
+                    "cached": analysis.get("cached", False),
+                    "complete": False,
+                    "latest_result": analysis
+                }
+                yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
+            
+        except Exception as e:
+            logger.error(f"Error processing {image_path}: {e}")
+            yield json.dumps({
+                "error": f"Failed to process {image_path}: {str(e)}",
+                "progress": min(100, int(((i + 1) / total_files) * 100)),
+                "current": i + 1,
+                "total": total_files
+            }) + "\n"
+            continue
+    
+    # Send final complete message with all results
+    yield json.dumps({
+        "complete": True,
+        "results": results,
+        "total": total_files
+    }, cls=NumpyJSONEncoder) + "\n"
+
 @app.get("/analyze-folder")
 async def analyze_folder(db: AsyncSession = Depends(get_db)):
     """Analyze all images in the folder and stream results."""
@@ -281,118 +443,6 @@ async def analyze_folder(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to analyze folder: {e}")
         return JSONResponse(status_code=500, content={"error": "Failed to analyze folder"})
-
-async def analyze_image_stream(image_files: list, db_service: DatabaseService) -> AsyncGenerator[str, None]:
-    """Stream analysis results for each image."""
-    total_files = len(image_files)
-    results = []
-    batch_size = 8
-    
-    for i in range(0, len(image_files), batch_size):
-        batch = image_files[i:i+batch_size]
-        
-        for image_path in batch:
-            try:
-                # Convert string path to Path object
-                image_path_obj = Path(str(image_path)).resolve()
-                # Check if image already exists in database
-                existing_image = await db_service.get_image_by_filename(image_path_obj.name)
-                is_cached = False
-                if existing_image:
-                    # Get cached analysis results
-                    cached_result = await db_service.get_image_analysis(existing_image.id)
-                    if cached_result:
-                        logger.info(f"Using cached analysis for {image_path_obj.name}")
-                        # Use the cached result directly
-                        analysis_data = cached_result
-                        # Include the filename in the analysis data
-                        analysis_data["filename"] = image_path_obj.name
-                        # Add to results without nesting under "analysis"
-                        results.append(analysis_data)
-                        is_cached = True
-                    else:
-                        logger.warning(f"Cached image found for {image_path_obj.name} but failed to get analysis.")
-                        # Proceed to re-analyze if cache retrieval failed
-                        is_cached = False
-                else:
-                    is_cached = False
-
-                if not is_cached:
-                    logger.info(f"Analyzing image: {image_path_obj.name}")
-                    # Get a session from the database service
-                    session = await db_service.get_session()
-                    try:
-                        # Analyze image with session (this saves to DB and returns image_id)
-                        saved_result = await analyzer.analyze_image_with_session(image_path_obj, session)
-                        
-                        # Check if we got a valid image ID or an error dictionary
-                        if isinstance(saved_result, int):
-                            # Retrieve the saved analysis data in the correct format
-                            analysis_data = await db_service.get_image_analysis(saved_result)
-                            if analysis_data:
-                                # Include the filename in the analysis data
-                                analysis_data["filename"] = image_path_obj.name
-                                # Add to results without nesting under "analysis"
-                                results.append(analysis_data)
-                            else:
-                                logger.error(f"Failed to retrieve analysis for {image_path_obj.name} after saving (ID: {saved_result})")
-                                error_progress = {
-                                    "progress": min(100, int((len(results) / total_files) * 100)),
-                                    "current": len(results),
-                                    "total": total_files,
-                                    "filename": image_path_obj.name,
-                                    "error": "Failed to retrieve analysis after saving",
-                                    "complete": False
-                                }
-                                yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
-                    except Exception as e:
-                        logger.exception(f"Error during analysis or retrieval for {image_path_obj.name}")
-                        await session.rollback()
-                        error_progress = {
-                            "progress": min(100, int((len(results) / total_files) * 100)),
-                            "current": len(results),
-                            "total": total_files,
-                            "filename": image_path_obj.name,
-                            "error": str(e),
-                            "complete": False
-                        }
-                        yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
-                    finally:
-                        await session.close()
-                # Send progress update regardless of cache status
-                progress = {
-                    "progress": min(100, int((len(results) / total_files) * 100)),
-                    "current": len(results),
-                    "total": total_files,
-                    "filename": image_path_obj.name,
-                    "cached": is_cached,
-                    "complete": False
-                }
-                yield json.dumps(progress, cls=NumpyJSONEncoder) + "\n"
-
-            except Exception as e:
-                logger.exception(f"Error processing {image_path_obj.name}: {e}")
-                # Yield error status for this specific file
-                error_progress = {
-                    "progress": min(100, int((len(results) / total_files) * 100)),
-                    "current": len(results),
-                    "total": total_files,
-                    "filename": image_path_obj.name,
-                    "error": str(e),
-                    "complete": False
-                }
-                yield json.dumps(error_progress, cls=NumpyJSONEncoder) + "\n"
-                continue # Move to the next file
-
-    # Yield final results
-    final_data = {
-        "progress": 100,
-        "current": len(results),
-        "total": total_files,
-        "complete": True,
-        "results": results
-    }
-    yield json.dumps(final_data, cls=NumpyJSONEncoder) + "\n"
 
 @app.get("/image-analysis/{filename}")
 async def get_image_analysis(filename: str, db: AsyncSession = Depends(get_db)):
