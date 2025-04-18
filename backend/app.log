@@ -2550,3 +2550,59 @@ WHERE scene_classifications.image_id = $1::INTEGER
 2025-04-17 01:37:10,220 - sqlalchemy.engine.Engine - INFO - [cached since 10.86s ago] (173,)
 2025-04-17 01:37:10,235 - database.database_service - INFO - Retrieved analysis for image 'IMG_9407.jpeg': 1 faces, 4 objects, 10 text blocks
 2025-04-17 01:37:10,236 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-04-18 01:47:26,862 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 01:47:26,967 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 01:47:30,031 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 01:47:32,048 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 01:47:32,065 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 01:47:32,065 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 01:47:32,065 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 01:53:49,109 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 01:53:49,170 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 01:53:54,143 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 01:53:55,210 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 01:53:55,215 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 01:53:55,215 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 01:53:55,215 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 01:54:11,432 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 01:54:11,498 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 01:54:15,686 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 01:54:16,771 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 01:54:16,775 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 01:54:16,775 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 01:54:16,775 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 02:41:21,481 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 02:41:21,536 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 02:41:24,216 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 02:41:25,177 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 02:41:25,179 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 02:41:25,179 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 02:41:25,179 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 02:41:48,550 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 02:41:48,607 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 02:41:50,805 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 02:41:51,594 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 02:41:51,596 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 02:41:51,596 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 02:41:51,596 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 02:44:02,682 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 02:44:02,718 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 02:44:04,777 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 02:44:05,521 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 02:44:05,523 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 02:44:05,523 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 02:44:05,523 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 02:45:14,144 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 02:45:14,174 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 02:45:16,617 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 02:45:17,334 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 02:45:17,336 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 02:45:17,336 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 02:45:17,336 - main - INFO - PhotoCortex models loaded and ready
+2025-04-18 02:48:48,614 - models.inference.face_detector - INFO - Face detector initialized with faces directory: /Users/soumya/Desktop/Projects/cortexV2/backend/image/faces
+2025-04-18 02:48:48,665 - models.inference.object_detector - INFO - YOLOv8s model initialized successfully
+2025-04-18 02:48:50,858 - models.inference.scene_classifier - INFO - Computing text features...
+2025-04-18 02:48:51,685 - models.inference.scene_classifier - INFO - Successfully loaded Places365 model
+2025-04-18 02:48:51,687 - models.inference.scene_classifier - INFO - Scene classifier (CLIP + Places365) initialized successfully
+2025-04-18 02:48:51,688 - models.inference.image_analyzer - INFO - ImageAnalyzer initialized successfully
+2025-04-18 02:48:51,688 - main - INFO - PhotoCortex models loaded and ready

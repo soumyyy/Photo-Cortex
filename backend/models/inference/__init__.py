@@ -10,7 +10,8 @@ from .face_detector import FaceDetector
 from .object_detector import ObjectDetector
 from .scene_classifier import SceneClassifier
 from .text_recognizer import TextRecognizer
+from .similarity_processor import SimilarityProcessor
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['FaceDetector', 'ObjectDetector', 'SceneClassifier', 'TextRecognizer']
+__all__ = ['FaceDetector', 'ObjectDetector', 'SceneClassifier', 'TextRecognizer', 'SimilarityProcessor']

@@ -1,14 +1,14 @@
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import logging
 import json
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from typing import List, Dict, Any, Optional, AsyncGenerator, Tuple
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -34,6 +34,7 @@ from pydantic import BaseModel
 import shutil
 from models.inference.face_detector import FaceDetector
 from werkzeug.utils import secure_filename
+import magic
 
 # Configure logging
 logging.basicConfig(
@@ -179,29 +180,76 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Constants for paths
-BACKEND_DIR = Path(__file__).resolve().parent
-FACES_DIR = BACKEND_DIR / "image" / "faces"
-FACES_DIR.mkdir(exist_ok=True, parents=True)
-
-# Global configuration
+# Application configuration
 APP_CONFIG = {
-    "IMAGES_DIR": str(BACKEND_DIR / "image"),
-    "API_BASE_URL": "http://localhost:8000",
-    "FACES_DIR": str(FACES_DIR)
+    "UPLOAD_FOLDER": "uploads",
+    "IMAGE_DIR": str(Path("image").resolve()),
+    "FACE_DIR": str(Path("image/faces").resolve())
 }
 
 # Ensure directories exist
-IMAGES_DIR = Path(APP_CONFIG["IMAGES_DIR"]).resolve()
-os.makedirs(IMAGES_DIR, exist_ok=True)
-FACES_DIR = Path(APP_CONFIG["FACES_DIR"]).resolve()
-os.makedirs(FACES_DIR, exist_ok=True)
+IMAGE_DIR = Path(APP_CONFIG["IMAGE_DIR"]).resolve()
+os.makedirs(IMAGE_DIR, exist_ok=True)
+FACE_DIR = Path(APP_CONFIG["FACE_DIR"]).resolve()
+os.makedirs(FACE_DIR, exist_ok=True)
+
+# Mount static files
+app.mount("/image", StaticFiles(directory=IMAGE_DIR), name="images")
+app.mount("/face", StaticFiles(directory=FACE_DIR), name="faces")
+
+# Validation functions
+def validate_image_id(image_id: int) -> int:
+    if image_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid image ID")
+    return image_id
+
+def validate_threshold(threshold: float = Query(0.7, ge=0.0, le=1.0)) -> float:
+    return threshold
+
+def validate_pagination(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100)
+) -> Tuple[int, int]:
+    return page, page_size
+
+# Response models
+class UploadResponse(BaseModel):
+    filename: str
+    analysis: dict
+    cached: bool = False
+
+class SimilarImageInfo(BaseModel):
+    image_id: int
+    filename: str
+    similarity_score: float
+
+class SimilarityGroupResponse(BaseModel):
+    group_id: int
+    group_type: str
+    key_image_id: int
+    members: List[SimilarImageInfo]
+
+class SimilarityGroupCreate(BaseModel):
+    group_type: str = Field("visual", pattern="^(visual|semantic|face)$")
+    threshold: float = Field(0.7, ge=0.0, le=1.0)
+
+class PaginatedSimilarImages(BaseModel):
+    total: int
+    items: List[SimilarImageInfo]
+    page: int
+    page_size: int
+
+class EmbeddingResponse(BaseModel):
+    image_id: int
+    success: bool
+    message: str
+    error: Optional[str] = None
 
 @app.get("/config")
 async def get_config():
@@ -216,7 +264,7 @@ async def get_face_image(face_identifier: str):
     if not face_identifier.endswith('.jpg'):
         face_identifier = f"{face_identifier}.jpg"
     
-    image_path = FACES_DIR / face_identifier
+    image_path = FACE_DIR / face_identifier
     
     if not image_path.exists():
         logger.error(f"Face image not found: {image_path}")
@@ -236,7 +284,7 @@ async def get_face_image(face_identifier: str):
 @app.get("/images/{image_name}")
 async def get_image(image_name: str):
     """Serve images with proper headers."""
-    image_path = IMAGES_DIR / image_name
+    image_path = IMAGE_DIR / image_name
     if not image_path.exists():
         logger.error(f"Image not found: {image_path}")
         return JSONResponse(status_code=404, content={"error": f"Image {image_name} not found"})
@@ -253,7 +301,7 @@ async def get_image(image_name: str):
 async def serve_image(image_path: str):
     """Serve images with proper MIME types and caching."""
     try:
-        image_full_path = Path(APP_CONFIG["IMAGES_DIR"]) / image_path
+        image_full_path = Path(APP_CONFIG["IMAGE_DIR"]) / image_path
         if not image_full_path.exists():
             return JSONResponse(status_code=404, content={"error": f"Image not found: {image_path}"})
         mime_type, _ = mimetypes.guess_type(str(image_full_path))
@@ -290,11 +338,11 @@ async def analyze_image(
             
         # Sanitize filename before any database operations
         sanitized_filename = sanitize_filename(filename)
-        image_path = IMAGES_DIR / sanitized_filename
+        image_path = IMAGE_DIR / sanitized_filename
         
         if not image_path.exists():
             # Try with original filename if sanitized version doesn't exist
-            original_path = IMAGES_DIR / filename
+            original_path = IMAGE_DIR / filename
             if not original_path.exists():
                 raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
             else:
@@ -437,7 +485,7 @@ async def analyze_image_stream(image_files: list, db_service: DatabaseService) -
 async def analyze_folder(db: AsyncSession = Depends(get_db)):
     """Analyze all images in the folder and stream results."""
     try:
-        image_files = [f for f in IMAGES_DIR.glob("*") if f.suffix.lower() in {'.jpg', '.jpeg', '.png'}]
+        image_files = [f for f in IMAGE_DIR.glob("*") if f.suffix.lower() in {'.jpg', '.jpeg', '.png'}]
         if not image_files:
             return JSONResponse(status_code=400, content={"error": "No images found in the directory"})
         
@@ -528,10 +576,315 @@ async def get_unique_faces(db: AsyncSession = Depends(get_db)):
             content={"error": str(e)}
         )
 
-class UploadResponse(BaseModel):
-    filename: str
-    analysis: dict
-    cached: bool = False
+@app.post("/api/image/{image_id}/compute-embeddings", 
+          response_model=EmbeddingResponse,
+          responses={
+              404: {"description": "Image not found"},
+              415: {"description": "Unsupported image format"},
+              500: {"description": "Processing error"}
+          })
+async def compute_image_embeddings(
+    image_id: int = validate_image_id,
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """Compute and store embeddings for an image.
+    
+    Args:
+        image_id: ID of the image to process
+        
+    Returns:
+        EmbeddingResponse with success status and any error messages
+        
+    Raises:
+        HTTPException: If image not found or processing fails
+    """
+    try:
+        # Get image record
+        image = await db.get(DBImage, image_id)
+        if not image:
+            raise HTTPException(status_code=404, detail="Image not found")
+            
+        image_path = IMAGE_DIR / image.filename
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail="Image file not found")
+
+        # Check file type
+        mime = magic.from_file(str(image_path), mime=True)
+        if not mime.startswith('image/'):
+            raise HTTPException(
+                status_code=415,
+                detail=f"Invalid file type: {mime}. Expected image/*"
+            )
+
+        # Initialize similarity processor if needed
+        if not analyzer.similarity_processor:
+            analyzer.set_similarity_processor(DatabaseService(get_async_session))
+
+        # Process image
+        result = await analyzer.similarity_processor.process_single_image(
+            str(image_path),
+            image_id
+        )
+        
+        if not result['success']:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to process image: {result.get('error', 'Unknown error')}"
+            )
+            
+        return {
+            "image_id": image_id,
+            "success": True,
+            "message": "Embeddings computed and stored successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error computing embeddings for image {image_id}: {e}")
+        return {
+            "image_id": image_id,
+            "success": False,
+            "message": "Failed to compute embeddings",
+            "error": str(e)
+        }
+
+@app.get("/api/image/{image_id}/similar", 
+         response_model=PaginatedSimilarImages,
+         responses={
+             404: {"description": "Image not found"},
+             500: {"description": "Processing error"}
+         })
+async def find_similar_images(
+    image_id: int = validate_image_id,
+    threshold: float = validate_threshold,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+) -> PaginatedSimilarImages:
+    """Find similar images for a given image.
+    
+    Args:
+        image_id: ID of the source image
+        threshold: Similarity threshold (0.0 to 1.0)
+        page: Page number for pagination
+        page_size: Number of items per page
+        
+    Returns:
+        PaginatedSimilarImages with list of similar images
+        
+    Raises:
+        HTTPException: If image not found or processing fails
+    """
+    try:
+        # Check if image exists
+        image = await db.get(DBImage, image_id)
+        if not image:
+            raise HTTPException(status_code=404, detail="Image not found")
+
+        # Initialize similarity processor if needed
+        if not analyzer.similarity_processor:
+            analyzer.set_similarity_processor(DatabaseService(get_async_session))
+            
+        # Find similar images
+        similar_images = await analyzer.similarity_processor.find_similar_images(
+            image_id,
+            threshold=threshold
+        )
+        
+        # Apply pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_items = similar_images[start:end]
+        
+        return {
+            "total": len(similar_images),
+            "items": paginated_items,
+            "page": page,
+            "page_size": page_size
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error finding similar images for {image_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error finding similar images: {str(e)}"
+        )
+
+@app.post("/api/similarity-groups", 
+          response_model=SimilarityGroupResponse,
+          responses={
+              400: {"description": "Invalid request or no similar images found"},
+              404: {"description": "Image not found"},
+              500: {"description": "Processing error"}
+          })
+async def create_similarity_group(
+    group_data: SimilarityGroupCreate,
+    image_id: int = validate_image_id,
+    db: AsyncSession = Depends(get_db)
+) -> SimilarityGroupResponse:
+    """Create a new similarity group with the given image as key.
+    
+    Args:
+        group_data: Group creation parameters
+        image_id: ID of the key image
+        
+    Returns:
+        SimilarityGroupResponse with group details and members
+        
+    Raises:
+        HTTPException: If creation fails or invalid parameters
+    """
+    try:
+        # Check if image exists
+        image = await db.get(DBImage, image_id)
+        if not image:
+            raise HTTPException(status_code=404, detail="Image not found")
+
+        # Initialize similarity processor if needed
+        if not analyzer.similarity_processor:
+            analyzer.set_similarity_processor(DatabaseService(get_async_session))
+            
+        # Find similar images first
+        similar_images = await analyzer.similarity_processor.find_similar_images(
+            image_id,
+            threshold=group_data.threshold
+        )
+        
+        if not similar_images:
+            raise HTTPException(
+                status_code=400,
+                detail="No similar images found with the given threshold"
+            )
+            
+        # Create the group
+        group = await analyzer.similarity_processor.create_similarity_group(
+            image_id,
+            similar_images,
+            group_type=group_data.group_type
+        )
+        
+        if not group:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create similarity group"
+            )
+            
+        return group
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating similarity group for image {image_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating similarity group: {str(e)}"
+        )
+
+@app.get("/api/similarity-groups/{group_id}", 
+         response_model=SimilarityGroupResponse,
+         responses={
+             404: {"description": "Group not found"},
+             500: {"description": "Processing error"}
+         })
+async def get_similarity_group(
+    group_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> SimilarityGroupResponse:
+    """Get details of a similarity group.
+    
+    Args:
+        group_id: ID of the similarity group
+        
+    Returns:
+        SimilarityGroupResponse with group details and members
+        
+    Raises:
+        HTTPException: If group not found or processing fails
+    """
+    try:
+        # Get group from database
+        group = await db.get(SimilarImageGroup, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Similarity group not found")
+            
+        # Get all members
+        stmt = select(DBImage, SimilarImageGroupMember).join(
+            SimilarImageGroupMember,
+            DBImage.id == SimilarImageGroupMember.image_id
+        ).where(SimilarImageGroupMember.group_id == group_id)
+        
+        result = await db.execute(stmt)
+        members = result.all()
+        
+        return {
+            "group_id": group.id,
+            "group_type": group.group_type,
+            "key_image_id": group.key_image_id,
+            "members": [
+                {
+                    "image_id": img.id,
+                    "filename": img.filename,
+                    "similarity_score": member.similarity_score
+                }
+                for img, member in members
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting similarity group {group_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting similarity group: {str(e)}"
+        )
+
+@app.get("/api/image/{image_id}/similarity-groups", 
+         response_model=List[SimilarityGroupResponse],
+         responses={
+             404: {"description": "Image not found"},
+             500: {"description": "Processing error"}
+         })
+async def get_image_similarity_groups(
+    image_id: int = validate_image_id,
+    db: AsyncSession = Depends(get_db)
+) -> List[SimilarityGroupResponse]:
+    """Get all similarity groups that contain this image.
+    
+    Args:
+        image_id: ID of the image
+        
+    Returns:
+        List of SimilarityGroupResponse containing group details
+        
+    Raises:
+        HTTPException: If image not found or processing fails
+    """
+    try:
+        # Check if image exists
+        image = await db.get(DBImage, image_id)
+        if not image:
+            raise HTTPException(status_code=404, detail="Image not found")
+
+        # Initialize similarity processor if needed
+        if not analyzer.similarity_processor:
+            analyzer.set_similarity_processor(DatabaseService(get_async_session))
+            
+        # Get groups from database service
+        groups = await analyzer.similarity_processor.db_service.get_similar_images(image_id)
+        return groups
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting similarity groups for image {image_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting similarity groups: {str(e)}"
+        )
 
 @app.put("/face-identity/{identity_id}")
 async def update_face_identity(
@@ -601,7 +954,7 @@ async def upload_image(
             
         # Generate safe filename
         filename = secure_filename(file.filename)
-        file_path = IMAGES_DIR / filename
+        file_path = IMAGE_DIR / filename
         
         # Check if file already exists and analyzed
         existing_image = await db_service.get_image_by_filename(filename)
@@ -709,7 +1062,7 @@ async def scan_text(
             raise HTTPException(status_code=400, detail="Filename is required")
             
         # Use the correct image directory from APP_CONFIG
-        image_path = IMAGES_DIR / filename
+        image_path = IMAGE_DIR / filename
         
         if not image_path.exists():
             raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
@@ -880,8 +1233,8 @@ async def reprocess_faces(db: AsyncSession = Depends(get_db)):
         await db.commit()
         
         # Clear existing face crops
-        if FACES_DIR.exists():
-            for face_file in FACES_DIR.glob("face_*.jpg"):
+        if FACE_DIR.exists():
+            for face_file in FACE_DIR.glob("face_*.jpg"):
                 face_file.unlink()
         
         total = len(images)
@@ -893,7 +1246,7 @@ async def reprocess_faces(db: AsyncSession = Depends(get_db)):
         for image in images:
             try:
                 # Load image
-                image_path = IMAGES_DIR / image.filename
+                image_path = IMAGE_DIR / image.filename
                 if not image_path.exists():
                     logger.error(f"Image not found: {image_path}")
                     continue
@@ -977,9 +1330,9 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
         for detection, image in detections:
             try:
                 # Build paths
-                src_path = os.path.join(APP_CONFIG["IMAGES_DIR"], image.filename)
+                src_path = os.path.join(APP_CONFIG["IMAGE_DIR"], image.filename)
                 face_filename = f"face_{detection.id}.jpg"
-                dest_path = os.path.join(APP_CONFIG["FACES_DIR"], face_filename)
+                dest_path = os.path.join(APP_CONFIG["FACE_DIR"], face_filename)
                 
                 # Verify source image exists and is readable
                 if not os.path.exists(src_path):
@@ -1025,7 +1378,7 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
         return {
             "success": success, 
             "failed": failed,
-            "faces_dir": os.path.abspath(APP_CONFIG["FACES_DIR"])
+            "faces_dir": os.path.abspath(APP_CONFIG["FACE_DIR"])
         }
         
     except Exception as e:
@@ -1034,7 +1387,7 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
 
 @app.delete("/delete-image/{image_id}", status_code=status.HTTP_200_OK)
 async def delete_image_endpoint(
-    image_id: int = Depends(lambda image_id: int(image_id)), 
+    image_id: int = 0, 
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1105,7 +1458,7 @@ async def delete_image_endpoint(
     # --- 4. Delete Filesystem Files --- 
     deleted_files = []
     failed_files = []
-    original_image_path = IMAGES_DIR / image_filename
+    original_image_path = IMAGE_DIR / image_filename
     try:
         if original_image_path.is_file():
             original_image_path.unlink()
@@ -1118,7 +1471,7 @@ async def delete_image_endpoint(
         failed_files.append(str(original_image_path))
     for detection_id in face_detection_ids:
         face_filename = f"face_{image_id}_{detection_id}.jpg"
-        face_image_path = FACES_DIR / face_filename
+        face_image_path = FACE_DIR / face_filename
         try:
             if face_image_path.is_file():
                 face_image_path.unlink()

@@ -35,6 +35,8 @@ class Image(Base):
     object_detections = relationship("ObjectDetection", back_populates="image")
     text_detections = relationship("TextDetection", back_populates="image")
     scene_classifications = relationship("SceneClassification", back_populates="image")
+    embeddings = relationship("ImageEmbedding", back_populates="image", cascade="all, delete-orphan")
+    similarity_groups = relationship("SimilarImageGroup", secondary="similar_image_group_members", back_populates="members")
 
 class ExifMetadata(Base):
     __tablename__ = 'exif_metadata'
@@ -105,3 +107,52 @@ class SceneClassification(Base):
     confidence = Column(Float, nullable=False)
     
     image = relationship("Image", back_populates="scene_classifications")
+
+class ImageEmbedding(Base):
+    __tablename__ = 'image_embeddings'
+    
+    id = Column(Integer, primary_key=True)
+    image_id = Column(Integer, ForeignKey('images.id', ondelete='CASCADE'), index=True, nullable=False)
+    embedding_type = Column(String, nullable=False)  # 'clip', 'face', 'object', 'phash'
+    embedding = Column(Vector(512), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Relationships
+    image = relationship("Image", back_populates="embeddings")
+    
+    # Indexes for faster querying
+    __table_args__ = (
+        Index('idx_image_embeddings_type', 'embedding_type'),
+        Index('idx_image_embeddings_image_type', 'image_id', 'embedding_type', unique=True),
+    )
+
+class SimilarImageGroup(Base):
+    __tablename__ = 'similar_image_groups'
+    
+    id = Column(Integer, primary_key=True)
+    group_type = Column(String, nullable=False)  # 'visual', 'face', 'object', 'phash'
+    key_image_id = Column(Integer, ForeignKey('images.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Relationships
+    key_image = relationship("Image", foreign_keys=[key_image_id])
+    members = relationship("Image", secondary="similar_image_group_members", back_populates="similarity_groups")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_similar_groups_type', 'group_type'),
+    )
+
+class SimilarImageGroupMember(Base):
+    __tablename__ = 'similar_image_group_members'
+    
+    group_id = Column(Integer, ForeignKey('similar_image_groups.id', ondelete='CASCADE'), primary_key=True)
+    image_id = Column(Integer, ForeignKey('images.id', ondelete='CASCADE'), primary_key=True)
+    similarity_score = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_group_members_image', 'image_id'),
+        Index('idx_group_members_score', 'similarity_score'),
+    )

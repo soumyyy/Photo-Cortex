@@ -3,7 +3,7 @@ from sqlalchemy import select, insert, delete, update
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
 import logging
-from .models import Image, FaceDetection, ObjectDetection, TextDetection, SceneClassification, ExifMetadata, FaceIdentity
+from .models import Image, FaceDetection, ObjectDetection, TextDetection, SceneClassification, ExifMetadata, FaceIdentity, ImageEmbedding, SimilarImageGroup, SimilarImageGroupMember
 from geoalchemy2.functions import ST_GeogFromText
 from datetime import datetime
 import pathlib
@@ -514,6 +514,131 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Error merging face identities: {e}")
             return False
+
+    async def save_image_embedding(self, image_id: int, embedding_type: str, embedding: List[float]) -> Optional[ImageEmbedding]:
+        """Save an image embedding to the database."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Check if embedding already exists for this image and type
+                    query = select(ImageEmbedding).where(
+                        (ImageEmbedding.image_id == image_id) & 
+                        (ImageEmbedding.embedding_type == embedding_type)
+                    )
+                    result = await session.execute(query)
+                    existing = result.scalar_one_or_none()
+                    
+                    if existing:
+                        existing.embedding = embedding
+                        existing.created_at = datetime.utcnow()
+                        await session.commit()
+                        return existing
+                    
+                    # Create new embedding
+                    embedding_record = ImageEmbedding(
+                        image_id=image_id,
+                        embedding_type=embedding_type,
+                        embedding=embedding
+                    )
+                    session.add(embedding_record)
+                    await session.commit()
+                    return embedding_record
+                    
+        except Exception as e:
+            logger.error(f"Error saving image embedding: {e}")
+            return None
+
+    async def get_image_embeddings(self, image_id: int) -> List[Dict[str, Any]]:
+        """Get all embeddings for an image."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    query = select(ImageEmbedding).where(ImageEmbedding.image_id == image_id)
+                    result = await session.execute(query)
+                    embeddings = result.scalars().all()
+                    
+                    return [{
+                        'id': emb.id,
+                        'type': emb.embedding_type,
+                        'embedding': emb.embedding,
+                        'created_at': emb.created_at
+                    } for emb in embeddings]
+                    
+        except Exception as e:
+            logger.error(f"Error getting image embeddings: {e}")
+            return []
+
+    async def create_similar_image_group(self, group_type: str, key_image_id: int, member_scores: List[Dict[str, Any]]) -> Optional[SimilarImageGroup]:
+        """Create a new similar image group with members."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Create the group
+                    group = SimilarImageGroup(
+                        group_type=group_type,
+                        key_image_id=key_image_id
+                    )
+                    session.add(group)
+                    await session.flush()
+                    
+                    # Add members
+                    for member in member_scores:
+                        member_record = SimilarImageGroupMember(
+                            group_id=group.id,
+                            image_id=member['image_id'],
+                            similarity_score=member['score']
+                        )
+                        session.add(member_record)
+                    
+                    await session.commit()
+                    return group
+                    
+        except Exception as e:
+            logger.error(f"Error creating similar image group: {e}")
+            return None
+
+    async def get_similar_images(self, image_id: int) -> List[Dict[str, Any]]:
+        """Get all similar image groups that contain this image."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    # Get all groups this image is a member of
+                    query = select(SimilarImageGroup, SimilarImageGroupMember).join(
+                        SimilarImageGroupMember,
+                        SimilarImageGroup.id == SimilarImageGroupMember.group_id
+                    ).where(SimilarImageGroupMember.image_id == image_id)
+                    
+                    result = await session.execute(query)
+                    groups_and_scores = result.all()
+                    
+                    similar_groups = []
+                    for group, member in groups_and_scores:
+                        # Get all members of this group
+                        members_query = select(Image, SimilarImageGroupMember).join(
+                            SimilarImageGroupMember,
+                            Image.id == SimilarImageGroupMember.image_id
+                        ).where(SimilarImageGroupMember.group_id == group.id)
+                        
+                        members_result = await session.execute(members_query)
+                        group_members = members_result.all()
+                        
+                        similar_groups.append({
+                            'group_id': group.id,
+                            'group_type': group.group_type,
+                            'key_image_id': group.key_image_id,
+                            'similarity_score': member.similarity_score,
+                            'members': [{
+                                'image_id': m[0].id,
+                                'filename': m[0].filename,
+                                'score': m[1].similarity_score
+                            } for m in group_members]
+                        })
+                    
+                    return similar_groups
+                    
+        except Exception as e:
+            logger.error(f"Error getting similar images: {e}")
+            return []
 
     async def cleanup(self):
         """Close the database session."""

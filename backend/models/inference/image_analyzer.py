@@ -28,8 +28,14 @@ class ImageAnalyzer:
         self.face_detector = FaceDetector()
         self.object_detector = ObjectDetector()
         self.scene_classifier = SceneClassifier()
-        # self.clip_encoder = ClipEncoder()
+        self.similarity_processor = None  # Will be set when database service is available
         logger.info("ImageAnalyzer initialized successfully")
+
+    def set_similarity_processor(self, db_service: Any):
+        """Set the similarity processor with database service."""
+        from .similarity_processor import SimilarityProcessor
+        self.similarity_processor = SimilarityProcessor(db_service)
+        logger.info("SimilarityProcessor initialized successfully")
 
     async def analyze_image_with_session(self, image_path: Path, session: AsyncSession) -> int:
         """
@@ -316,6 +322,19 @@ class ImageAnalyzer:
                     session.add(scene_classification)
                 except Exception as e:
                     logger.error(f"Failed to save scene classification for {image_path.name}: {e}")
+
+            # Process image for similarity if similarity processor is available
+            if image_id and self.similarity_processor:
+                try:
+                    # Process image for similarity
+                    similarity_result = await self.similarity_processor.process_single_image(
+                        str(image_path),
+                        image_id
+                    )
+                    if not similarity_result['success']:
+                        logger.error(f"Failed to process image for similarity: {similarity_result.get('error')}")
+                except Exception as e:
+                    logger.error(f"Error in similarity processing: {e}")
 
             # Final flush to ensure all records are saved
             logger.info(f"Attempting to commit session for image: {image_path} (ID: {image_id})")

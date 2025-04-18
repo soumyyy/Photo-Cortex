@@ -101,6 +101,52 @@ def upgrade():
                existing_type=sa.FLOAT(),
                nullable=False)
 
+    # Create image_embeddings table
+    op.create_table(
+        'image_embeddings',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('image_id', sa.Integer(), nullable=False),
+        sa.Column('embedding_type', sa.String(), nullable=False),
+        sa.Column('embedding', Vector(512), nullable=False),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+        sa.ForeignKeyConstraint(['image_id'], ['images.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    
+    # Create indexes for image_embeddings
+    op.create_index('idx_image_embeddings_type', 'image_embeddings', ['embedding_type'])
+    op.create_index('idx_image_embeddings_image_type', 'image_embeddings', ['image_id', 'embedding_type'], unique=True)
+    
+    # Create similar_image_groups table
+    op.create_table(
+        'similar_image_groups',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('group_type', sa.String(), nullable=False),
+        sa.Column('key_image_id', sa.Integer(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+        sa.ForeignKeyConstraint(['key_image_id'], ['images.id'], ondelete='SET NULL'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    
+    # Create index for similar_image_groups
+    op.create_index('idx_similar_groups_type', 'similar_image_groups', ['group_type'])
+    
+    # Create similar_image_group_members table
+    op.create_table(
+        'similar_image_group_members',
+        sa.Column('group_id', sa.Integer(), nullable=False),
+        sa.Column('image_id', sa.Integer(), nullable=False),
+        sa.Column('similarity_score', sa.Float(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+        sa.ForeignKeyConstraint(['group_id'], ['similar_image_groups.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['image_id'], ['images.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('group_id', 'image_id')
+    )
+    
+    # Create indexes for similar_image_group_members
+    op.create_index('idx_group_members_image', 'similar_image_group_members', ['image_id'])
+    op.create_index('idx_group_members_score', 'similar_image_group_members', ['similarity_score'])
+
 
 def downgrade():
     # Remove indexes
@@ -169,3 +215,13 @@ def downgrade():
     op.alter_column('scene_classifications', 'confidence',
                existing_type=sa.FLOAT(),
                nullable=True)
+
+    # Drop tables and indexes in reverse order
+    op.drop_index('idx_group_members_score')
+    op.drop_index('idx_group_members_image')
+    op.drop_table('similar_image_group_members')
+    op.drop_index('idx_similar_groups_type')
+    op.drop_table('similar_image_groups')
+    op.drop_index('idx_image_embeddings_image_type')
+    op.drop_index('idx_image_embeddings_type')
+    op.drop_table('image_embeddings')
