@@ -15,7 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import selectinload
 from database.database_service import DatabaseService
 from database.config import get_async_session, get_db
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import cv2
 import numpy as np
 import mimetypes
@@ -30,7 +30,6 @@ from database.models import Image as DBImage, TextDetection, ObjectDetection, Sc
 from fastapi.responses import JSONResponse
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel
 import shutil
 from models.inference.face_detector import FaceDetector
 from werkzeug.utils import secure_filename
@@ -185,23 +184,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Keep path resolution simple and do it once
+BASE_DIR = Path(__file__).parent.resolve()
+IMAGE_DIR = BASE_DIR / "image"
+FACE_DIR = IMAGE_DIR / "faces"
 
-# Application configuration
+# Include API_BASE_URL in config
 APP_CONFIG = {
-    "UPLOAD_FOLDER": "uploads",
-    "IMAGE_DIR": str(Path("image").resolve()),
-    "FACE_DIR": str(Path("image/faces").resolve())
+    "IMAGE_DIR": str(IMAGE_DIR),
+    "FACE_DIR": str(FACE_DIR),
+    "API_BASE_URL": "http://localhost:8000"  # Add this
 }
 
-# Ensure directories exist
-IMAGE_DIR = Path(APP_CONFIG["IMAGE_DIR"]).resolve()
-os.makedirs(IMAGE_DIR, exist_ok=True)
-FACE_DIR = Path(APP_CONFIG["FACE_DIR"]).resolve()
-os.makedirs(FACE_DIR, exist_ok=True)
+# Create directories in one go
+for directory in [IMAGE_DIR, FACE_DIR]:
+    os.makedirs(directory, exist_ok=True)
 
-# Mount static files
-app.mount("/image", StaticFiles(directory=IMAGE_DIR), name="images")
-app.mount("/face", StaticFiles(directory=FACE_DIR), name="faces")
+# Keep the static file mount as is
+app.mount("/image", StaticFiles(directory=str(IMAGE_DIR)), name="image")
 
 # Validation functions
 def validate_image_id(image_id: int) -> int:
@@ -281,7 +281,7 @@ async def get_face_image(face_identifier: str):
         headers={"Cache-Control": "public, max-age=3600"}
     )
 
-@app.get("/images/{image_name}")
+@app.get("/image/{image_name}")
 async def get_image(image_name: str):
     """Serve images with proper headers."""
     image_path = IMAGE_DIR / image_name
@@ -555,7 +555,7 @@ async def get_unique_faces(db: AsyncSession = Depends(get_db)):
             identity_list.append({
                 "id": identity.id,
                 "label": identity.label,
-                "images": [f"images/{img.filename}" for img in [d.image for d in identity.detections if d.image]],  
+                "images": [f"image/{img.filename}" for img in [d.image for d in identity.detections if d.image]],  
                 "detections": detections,
                 "detection_count": len(detections)  # Add count for sorting
             })
@@ -1312,7 +1312,7 @@ async def reprocess_faces(db: AsyncSession = Depends(get_db)):
         )
 
 @app.post("/recut-face-images")
-async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
+async def recut_face_images(db: AsyncSession = Depends(get_db)):
     """
     Reprocess all face detections and regenerate cropped face images
     """
@@ -1332,7 +1332,7 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
                 # Build paths
                 src_path = os.path.join(APP_CONFIG["IMAGE_DIR"], image.filename)
                 face_filename = f"face_{detection.id}.jpg"
-                dest_path = os.path.join(APP_CONFIG["FACE_DIR"], face_filename)
+                dest_path = os.path.join(APP_CONFIG["IMAGE_DIR"], face_filename)
                 
                 # Verify source image exists and is readable
                 if not os.path.exists(src_path):
@@ -1378,7 +1378,7 @@ async def recut_face_images(db: AsyncSession = Depends(get_async_session)):
         return {
             "success": success, 
             "failed": failed,
-            "faces_dir": os.path.abspath(APP_CONFIG["FACE_DIR"])
+            "faces_dir": os.path.abspath(APP_CONFIG["IMAGE_DIR"])
         }
         
     except Exception as e:
@@ -1471,7 +1471,7 @@ async def delete_image_endpoint(
         failed_files.append(str(original_image_path))
     for detection_id in face_detection_ids:
         face_filename = f"face_{image_id}_{detection_id}.jpg"
-        face_image_path = FACE_DIR / face_filename
+        face_image_path = IMAGE_DIR / face_filename
         try:
             if face_image_path.is_file():
                 face_image_path.unlink()

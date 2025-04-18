@@ -44,7 +44,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [showFaceOverlay, setShowFaceOverlay] = useState(false);
-  const [config, setConfig] = useState<{ API_BASE_URL: string }>({ API_BASE_URL: 'http://localhost:8000' });
+  const [config, setConfig] = useState<{ API_BASE_URL: string | null }>({ API_BASE_URL: null });
   const [isScanning, setIsScanning] = useState<string | null>(null); // Track scanning state by image filename
   const [scanResults, setScanResults] = useState<{ [key: string]: any }>({});  // Store results by image filename
   const [showTextOverlays, setShowTextOverlays] = useState<{ [key: string]: boolean }>({}); // Track overlay state by image filename
@@ -101,7 +101,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
       .catch(err => console.error('Failed to fetch config:', err));
   }, []);
 
-  const getImageUrl = (filename: string) => `${config.API_BASE_URL}/image/${encodeURIComponent(filename)}`;
+  const getImageUrl = (filename: string) => {
+    if (!config.API_BASE_URL) return ''; // Return empty string if API_BASE_URL is not set yet
+    return `${config.API_BASE_URL}/image/${encodeURIComponent(filename)}`;
+  };
 
   const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.target as HTMLImageElement;
